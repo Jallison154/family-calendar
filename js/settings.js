@@ -136,6 +136,7 @@ class SettingsManager {
     // Display
     this.setFormValue('display-24hour', config.display?.use24Hour);
     this.setFormValue('greeting-name', config.display?.greetingName);
+    this.setFormValue('show-festive-overlay', config.display?.showFestiveOverlay);
   }
 
   /**
@@ -237,6 +238,7 @@ class SettingsManager {
         use24Hour: this.getFormValue('display-24hour') === true || this.getFormValue('display-24hour') === 'true',
         greetingName: this.getFormValue('greeting-name'),
         showSeconds: false,
+        showFestiveOverlay: this.getFormValue('show-festive-overlay') === true || this.getFormValue('show-festive-overlay') === 'true',
         hideCursorAfter: 5000,
         widgets: {
           clock: true,
