@@ -429,52 +429,20 @@ class HomeAssistantClient {
   }
 
   /**
-   * Show demo entities (display only)
+   * Show empty state when not configured
    */
   showDemoEntities() {
-    this.updateStatus('connected');
+    this.updateStatus('disconnected');
     
-    const demoStates = [
-      { entity_id: 'sensor.living_room_temperature', state: '72', attributes: { unit_of_measurement: '°F' } },
-      { entity_id: 'sensor.living_room_humidity', state: '45', attributes: { unit_of_measurement: '%' } },
-      { entity_id: 'sensor.outdoor_temperature', state: '68', attributes: { unit_of_measurement: '°F' } },
-      { entity_id: 'light.living_room', state: 'on', attributes: { brightness: 200 } },
-      { entity_id: 'light.bedroom', state: 'off', attributes: {} },
-      { entity_id: 'climate.thermostat', state: 'heat', attributes: { current_temperature: 71, temperature: 72 } },
-      { entity_id: 'binary_sensor.front_door', state: 'off', attributes: {} },
-      { entity_id: 'sensor.energy_usage', state: '1.2', attributes: { unit_of_measurement: 'kW' } }
-    ];
-
-    demoStates.forEach(state => {
-      this.entityStates.set(state.entity_id, state);
-    });
-
-    // Use demo config if no entities configured
-    if (this.config.entities.length === 0) {
-      this.config.entities = [
-        { entityId: 'sensor.living_room_temperature', name: 'Living Room', icon: 'thermometer' },
-        { entityId: 'sensor.living_room_humidity', name: 'Humidity', icon: 'humidity' },
-        { entityId: 'sensor.outdoor_temperature', name: 'Outside', icon: 'thermometer' },
-        { entityId: 'light.living_room', name: 'Living Room Light', icon: 'lightbulb' },
-        { entityId: 'light.bedroom', name: 'Bedroom Light', icon: 'lightbulb' },
-        { entityId: 'climate.thermostat', name: 'Thermostat', icon: 'thermometer' },
-        { entityId: 'binary_sensor.front_door', name: 'Front Door', icon: 'door' },
-        { entityId: 'sensor.energy_usage', name: 'Power Usage', icon: 'energy' }
-      ];
+    // Show empty state - no demo data
+    const grid = document.getElementById('entity-grid');
+    if (grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align:center; padding:1rem; color:var(--color-text-muted); font-size:0.875rem;">
+          Configure Home Assistant in Control Panel
+        </div>
+      `;
     }
-
-    this.renderEntities();
-
-    // Simulate live updates for demo
-    setInterval(() => {
-      // Randomly update temperature
-      const tempState = this.entityStates.get('sensor.living_room_temperature');
-      if (tempState) {
-        const newTemp = 70 + Math.floor(Math.random() * 5);
-        tempState.state = newTemp.toString();
-        this.updateEntityDisplay('sensor.living_room_temperature');
-      }
-    }, 10000);
   }
 
   disconnect() {

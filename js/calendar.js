@@ -236,76 +236,8 @@ class GoogleCalendarWidget {
   }
 
   loadDemoEvents() {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    
-    // Color palette
-    const c = {
-      red: '#ef4444',
-      orange: '#f59e0b', 
-      green: '#10b981',
-      blue: '#3b82f6',
-      purple: '#8b5cf6',
-      pink: '#ec4899',
-      cyan: '#06b6d4',
-      amber: '#d97706'
-    };
-    
-    this.events = [
-      // Today
-      { id: '1', title: 'Morning Coffee ☕', start: new Date(now.getTime() + 8*3600000), end: new Date(now.getTime() + 8.5*3600000), isAllDay: false, color: c.amber },
-      { id: '2', title: 'Team Standup', start: new Date(now.getTime() + 9*3600000), end: new Date(now.getTime() + 9.5*3600000), isAllDay: false, color: c.blue },
-      { id: '3', title: 'Lunch with Sarah', start: new Date(now.getTime() + 12*3600000), end: new Date(now.getTime() + 13*3600000), isAllDay: false, color: c.pink },
-      { id: '4', title: 'Dentist 🦷', start: new Date(now.getTime() + 14*3600000), end: new Date(now.getTime() + 15*3600000), isAllDay: false, color: c.red },
-      { id: '5', title: 'Pick up kids', start: new Date(now.getTime() + 15.5*3600000), end: new Date(now.getTime() + 16*3600000), isAllDay: false, color: c.green },
-      
-      // Tomorrow
-      { id: '6', title: 'Gym 💪', start: new Date(now.getTime() + 86400000 + 6.5*3600000), end: new Date(now.getTime() + 86400000 + 7.5*3600000), isAllDay: false, color: c.green },
-      { id: '7', title: 'Client Call', start: new Date(now.getTime() + 86400000 + 10*3600000), end: new Date(now.getTime() + 86400000 + 11*3600000), isAllDay: false, color: c.purple },
-      { id: '8', title: 'Piano Lesson - Emma', start: new Date(now.getTime() + 86400000 + 16*3600000), end: new Date(now.getTime() + 86400000 + 17*3600000), isAllDay: false, color: c.cyan },
-      
-      // Day 2
-      { id: '9', title: "Mom's Birthday 🎂", start: new Date(now.getTime() + 2*86400000), end: new Date(now.getTime() + 3*86400000), isAllDay: true, color: c.pink },
-      { id: '10', title: 'Birthday Dinner', start: new Date(now.getTime() + 2*86400000 + 18*3600000), end: new Date(now.getTime() + 2*86400000 + 21*3600000), isAllDay: false, color: c.pink },
-      
-      // Day 3
-      { id: '11', title: 'Gym 💪', start: new Date(now.getTime() + 3*86400000 + 6.5*3600000), end: new Date(now.getTime() + 3*86400000 + 7.5*3600000), isAllDay: false, color: c.green },
-      { id: '12', title: 'Grocery Shopping', start: new Date(now.getTime() + 3*86400000 + 11*3600000), end: new Date(now.getTime() + 3*86400000 + 12*3600000), isAllDay: false, color: c.amber },
-      
-      // Day 4
-      { id: '13', title: 'Date Night 💕', start: new Date(now.getTime() + 4*86400000 + 19*3600000), end: new Date(now.getTime() + 4*86400000 + 22*3600000), isAllDay: false, color: c.pink },
-      
-      // Day 5-8: Beach Vacation
-      { id: '14', title: '🏖️ Beach Vacation', start: new Date(now.getTime() + 5*86400000), end: new Date(now.getTime() + 9*86400000), isAllDay: true, color: c.cyan },
-      
-      // Day 6
-      { id: '15', title: 'Soccer Game ⚽', start: new Date(now.getTime() + 6*86400000 + 10*3600000), end: new Date(now.getTime() + 6*86400000 + 12*3600000), isAllDay: false, color: c.green },
-      
-      // Day 9
-      { id: '16', title: 'Car Service 🚗', start: new Date(now.getTime() + 9*86400000 + 9*3600000), end: new Date(now.getTime() + 9*86400000 + 11*3600000), isAllDay: false, color: c.orange },
-      
-      // Day 10
-      { id: '17', title: 'Bills Due 💳', start: new Date(now.getTime() + 10*86400000), end: new Date(now.getTime() + 11*86400000), isAllDay: true, color: c.red },
-      { id: '18', title: 'Book Club 📚', start: new Date(now.getTime() + 10*86400000 + 19*3600000), end: new Date(now.getTime() + 10*86400000 + 21*3600000), isAllDay: false, color: c.purple },
-      
-      // Day 12-14: Conference
-      { id: '19', title: '🎤 Tech Conference', start: new Date(now.getTime() + 12*86400000), end: new Date(now.getTime() + 15*86400000), isAllDay: true, color: c.blue },
-      
-      // Day 15
-      { id: '20', title: 'Gym 💪', start: new Date(now.getTime() + 15*86400000 + 6.5*3600000), end: new Date(now.getTime() + 15*86400000 + 7.5*3600000), isAllDay: false, color: c.green },
-      
-      // Day 17
-      { id: '21', title: 'Movie Night 🎬', start: new Date(now.getTime() + 17*86400000 + 19*3600000), end: new Date(now.getTime() + 17*86400000 + 22*3600000), isAllDay: false, color: c.purple },
-      
-      // Day 20
-      { id: '22', title: 'School Play 🎭', start: new Date(now.getTime() + 20*86400000 + 18*3600000), end: new Date(now.getTime() + 20*86400000 + 20*3600000), isAllDay: false, color: c.amber },
-      
-      // Day 24
-      { id: '23', title: '🎄 Christmas Eve', start: new Date(now.getTime() + 24*86400000), end: new Date(now.getTime() + 25*86400000), isAllDay: true, color: c.red },
-      
-      // Day 25
-      { id: '24', title: '🎅 Christmas Day', start: new Date(now.getTime() + 25*86400000), end: new Date(now.getTime() + 26*86400000), isAllDay: true, color: c.green },
-    ];
+    // No demo data - calendar shows empty until configured
+    this.events = [];
   }
 
   render() {

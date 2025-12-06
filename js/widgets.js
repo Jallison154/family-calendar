@@ -256,53 +256,14 @@ class WeatherWidget {
   }
 
   showDemo() {
-    const today = new Date();
-    const month = today.getMonth();
-    
-    // Season-appropriate demo weather
-    let demoData;
-    if (month >= 11 || month <= 1) {
-      // Winter (Dec, Jan, Feb)
-      demoData = {
-        temp: 38, icon: '🌨️', humidity: 65, wind: 12, feelsLike: 32, unit: '°F',
-        condition: 'snow',
-        forecast: [
-          { date: today, high: 38, low: 28, icon: '🌨️' },
-          { date: new Date(today.getTime() + 86400000), high: 42, low: 31, icon: '⛅' },
-          { date: new Date(today.getTime() + 86400000 * 2), high: 35, low: 24, icon: '❄️' },
-          { date: new Date(today.getTime() + 86400000 * 3), high: 40, low: 29, icon: '☁️' },
-          { date: new Date(today.getTime() + 86400000 * 4), high: 45, low: 33, icon: '⛅' }
-        ]
-      };
-    } else if (month >= 5 && month <= 8) {
-      // Summer (Jun, Jul, Aug, Sep)
-      demoData = {
-        temp: 82, icon: '☀️', humidity: 55, wind: 8, feelsLike: 86, unit: '°F',
-        condition: 'sunny',
-        forecast: [
-          { date: today, high: 84, low: 68, icon: '☀️' },
-          { date: new Date(today.getTime() + 86400000), high: 88, low: 71, icon: '☀️' },
-          { date: new Date(today.getTime() + 86400000 * 2), high: 85, low: 70, icon: '⛅' },
-          { date: new Date(today.getTime() + 86400000 * 3), high: 79, low: 65, icon: '🌧️' },
-          { date: new Date(today.getTime() + 86400000 * 4), high: 81, low: 67, icon: '⛅' }
-        ]
-      };
-    } else {
-      // Spring/Fall
-      demoData = {
-        temp: 62, icon: '⛅', humidity: 50, wind: 10, feelsLike: 60, unit: '°F',
-        condition: 'partly cloudy',
-        forecast: [
-          { date: today, high: 65, low: 48, icon: '⛅' },
-          { date: new Date(today.getTime() + 86400000), high: 68, low: 52, icon: '☀️' },
-          { date: new Date(today.getTime() + 86400000 * 2), high: 58, low: 45, icon: '🌧️' },
-          { date: new Date(today.getTime() + 86400000 * 3), high: 55, low: 42, icon: '☁️' },
-          { date: new Date(today.getTime() + 86400000 * 4), high: 63, low: 50, icon: '⛅' }
-        ]
-      };
+    // Show empty state - configure weather in control panel
+    if (this.widgetEl) {
+      this.widgetEl.innerHTML = `
+        <div class="weather-empty" style="text-align:center;padding:1rem;color:var(--color-text-muted);font-size:0.875rem;">
+          Configure weather in Control Panel
+        </div>
+      `;
     }
-    
-    this.render(demoData);
   }
 
   render(data) {
