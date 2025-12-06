@@ -1,15 +1,17 @@
 /**
- * Google Calendar - Premium 4-Week Grid
+ * Calendar Widget - Supports Google API and ICS Feeds
  */
 
 class GoogleCalendarWidget {
   constructor(config) {
     this.config = {
       accounts: config.accounts || [],
+      icsFeeds: config.icsFeeds || [], // NEW: ICS feed support
       apiKey: config.apiKey || '',
       calendars: config.calendars || [],
       weeksAhead: config.weeksAhead || 4,
-      refreshInterval: config.refreshInterval || 300000
+      refreshInterval: config.refreshInterval || 300000,
+      corsProxy: config.corsProxy || 'https://api.allorigins.win/raw?url=' // CORS proxy for ICS
     };
     
     if (this.config.accounts.length === 0 && this.config.apiKey) {
@@ -30,11 +32,13 @@ class GoogleCalendarWidget {
     this.gridEl = document.getElementById('calendar-grid');
     if (!this.gridEl) return;
 
-    const hasConfig = this.config.accounts.some(a => 
+    const hasApiConfig = this.config.accounts.some(a => 
       a.apiKey && a.apiKey !== 'YOUR_GOOGLE_CALENDAR_API_KEY' && a.calendars?.length
     );
+    
+    const hasIcsFeeds = this.config.icsFeeds.some(f => f.url && f.url.trim());
 
-    if (!hasConfig) {
+    if (!hasApiConfig && !hasIcsFeeds) {
       this.loadDemoEvents();
     } else {
       await this.fetchEvents();
@@ -52,6 +56,7 @@ class GoogleCalendarWidget {
     
     const allEvents = [];
     
+    // Fetch from Google API
     for (const account of this.config.accounts) {
       if (!account.apiKey || account.apiKey === 'YOUR_GOOGLE_CALENDAR_API_KEY') continue;
       
@@ -60,8 +65,19 @@ class GoogleCalendarWidget {
           const events = await this.fetchCalendar(account.apiKey, cal, now, end);
           allEvents.push(...events);
         } catch (e) {
-          console.warn(`Calendar error (${cal.name}):`, e.message);
+          console.warn(`Calendar API error (${cal.name}):`, e.message);
         }
+      }
+    }
+    
+    // Fetch from ICS feeds
+    for (const feed of this.config.icsFeeds) {
+      if (!feed.url || !feed.url.trim()) continue;
+      try {
+        const events = await this.fetchIcsFeed(feed, now, end);
+        allEvents.push(...events);
+      } catch (e) {
+        console.warn(`ICS feed error (${feed.name}):`, e.message);
       }
     }
     
@@ -92,6 +108,131 @@ class GoogleCalendarWidget {
       color: calendar.color || '#3b82f6',
       calendarName: calendar.name
     }));
+  }
+
+  async fetchIcsFeed(feed, startRange, endRange) {
+    // Use CORS proxy to fetch ICS
+    const proxyUrl = this.config.corsProxy + encodeURIComponent(feed.url);
+    
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error(`Failed to fetch ICS: ${res.status}`);
+    
+    const icsText = await res.text();
+    return this.parseIcs(icsText, feed, startRange, endRange);
+  }
+
+  parseIcs(icsText, feed, startRange, endRange) {
+    const events = [];
+    const lines = icsText.replace(/\r\n /g, '').split(/\r\n|\n|\r/);
+    
+    let currentEvent = null;
+    
+    for (let line of lines) {
+      // Handle line continuations
+      if (line.startsWith(' ') || line.startsWith('\t')) {
+        continue;
+      }
+      
+      if (line === 'BEGIN:VEVENT') {
+        currentEvent = {};
+      } else if (line === 'END:VEVENT' && currentEvent) {
+        // Process completed event
+        if (currentEvent.start) {
+          const start = this.parseIcsDate(currentEvent.start);
+          let end = currentEvent.end ? this.parseIcsDate(currentEvent.end) : new Date(start.getTime() + 3600000);
+          
+          // Filter by date range
+          if (start <= endRange && end >= startRange) {
+            const isAllDay = currentEvent.start.length === 8; // YYYYMMDD format
+            
+            events.push({
+              id: currentEvent.uid || Math.random().toString(36),
+              title: currentEvent.summary || 'Untitled',
+              start,
+              end,
+              isAllDay,
+              location: currentEvent.location,
+              color: feed.color || '#3b82f6',
+              calendarName: feed.name || 'Calendar'
+            });
+          }
+        }
+        currentEvent = null;
+      } else if (currentEvent) {
+        // Parse event properties
+        const colonIdx = line.indexOf(':');
+        if (colonIdx > 0) {
+          let key = line.substring(0, colonIdx);
+          let value = line.substring(colonIdx + 1);
+          
+          // Handle properties with parameters (e.g., DTSTART;VALUE=DATE:20231225)
+          const semiIdx = key.indexOf(';');
+          if (semiIdx > 0) {
+            key = key.substring(0, semiIdx);
+          }
+          
+          // Unescape ICS text
+          value = value
+            .replace(/\\n/g, '\n')
+            .replace(/\\,/g, ',')
+            .replace(/\\;/g, ';')
+            .replace(/\\\\/g, '\\');
+          
+          switch (key) {
+            case 'SUMMARY':
+              currentEvent.summary = value;
+              break;
+            case 'DTSTART':
+              currentEvent.start = value;
+              break;
+            case 'DTEND':
+              currentEvent.end = value;
+              break;
+            case 'LOCATION':
+              currentEvent.location = value;
+              break;
+            case 'UID':
+              currentEvent.uid = value;
+              break;
+          }
+        }
+      }
+    }
+    
+    return events;
+  }
+
+  parseIcsDate(dateStr) {
+    // Handle different ICS date formats
+    // YYYYMMDD (all-day)
+    // YYYYMMDDTHHmmss (local time)
+    // YYYYMMDDTHHmmssZ (UTC)
+    
+    dateStr = dateStr.replace(/[^0-9TZ]/g, '');
+    
+    if (dateStr.length === 8) {
+      // All-day: YYYYMMDD
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6)) - 1;
+      const day = parseInt(dateStr.substring(6, 8));
+      return new Date(year, month, day);
+    } else if (dateStr.includes('T')) {
+      // DateTime
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6)) - 1;
+      const day = parseInt(dateStr.substring(6, 8));
+      const hour = parseInt(dateStr.substring(9, 11)) || 0;
+      const minute = parseInt(dateStr.substring(11, 13)) || 0;
+      const second = parseInt(dateStr.substring(13, 15)) || 0;
+      
+      if (dateStr.endsWith('Z')) {
+        return new Date(Date.UTC(year, month, day, hour, minute, second));
+      } else {
+        return new Date(year, month, day, hour, minute, second);
+      }
+    }
+    
+    return new Date(dateStr);
   }
 
   loadDemoEvents() {

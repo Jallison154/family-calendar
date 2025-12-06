@@ -326,12 +326,25 @@
       </div>
     </div>
 
-    <!-- Google Calendar -->
+    <!-- Calendar - ICS Feeds (Easy) -->
     <div class="card">
-      <div class="card-header"><h2>📅 Google Calendar</h2></div>
+      <div class="card-header"><h2>📅 Calendar - ICS Feeds (Recommended)</h2></div>
       <div class="card-body">
         <p class="form-hint" style="margin-bottom: 1rem;">
-          Get API key from <a href="https://console.cloud.google.com" target="_blank" style="color: var(--color-accent);">Google Cloud Console</a>
+          <strong>Easy setup - No API key needed!</strong><br>
+          Go to Google Calendar → Settings → Your Calendar → "Integrate calendar" → Copy "Secret address in iCal format"
+        </p>
+        <div id="ics-feeds"></div>
+        <button class="add-btn" onclick="addIcsFeed()">+ Add Calendar (ICS URL)</button>
+      </div>
+    </div>
+
+    <!-- Google Calendar API (Advanced) -->
+    <div class="card">
+      <div class="card-header"><h2>📅 Google Calendar API (Advanced)</h2></div>
+      <div class="card-body">
+        <p class="form-hint" style="margin-bottom: 1rem;">
+          Optional: Use API for more features. Get API key from <a href="https://console.cloud.google.com" target="_blank" style="color: var(--color-accent);">Google Cloud Console</a>
         </p>
         <div id="calendar-accounts"></div>
         <button class="add-btn" onclick="addCalendarAccount()">+ Add Calendar Account</button>
@@ -436,6 +449,7 @@ New Year, 2026-01-01"></textarea>
       document.getElementById('unsplash-interval').value = (s.unsplash?.interval || 30000) / 1000;
 
       renderCalendarAccounts(s.googleCalendar?.accounts || []);
+      renderIcsFeeds(s.googleCalendar?.icsFeeds || []);
 
       document.getElementById('ha-url').value = s.homeAssistant?.url || '';
       document.getElementById('ha-token').value = s.homeAssistant?.accessToken || '';
@@ -472,6 +486,7 @@ New Year, 2026-01-01"></textarea>
         },
         googleCalendar: {
           accounts: gatherCalendarAccounts(),
+          icsFeeds: gatherIcsFeeds(),
           weeksAhead: 4,
           refreshInterval: 300000
         },
@@ -561,6 +576,60 @@ New Year, 2026-01-01"></textarea>
         }
       });
       return accounts;
+    }
+
+    // ICS Feeds
+    let icsFeedCount = 0;
+    
+    function renderIcsFeeds(feeds) {
+      const container = document.getElementById('ics-feeds');
+      container.innerHTML = '';
+      icsFeedCount = 0;
+      if (feeds.length === 0) {
+        // Show empty state
+      } else {
+        feeds.forEach(f => addIcsFeed(f));
+      }
+    }
+
+    function addIcsFeed(feed = null) {
+      const container = document.getElementById('ics-feeds');
+      const index = icsFeedCount++;
+      const div = document.createElement('div');
+      div.className = 'account-card ics-feed-card';
+      div.id = `ics-feed-${index}`;
+      div.innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Calendar Name</label>
+          <input type="text" class="form-input ics-name" value="${feed?.name || ''}" placeholder="My Calendar">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ICS URL</label>
+          <input type="url" class="form-input ics-url" value="${feed?.url || ''}" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
+          <div class="form-hint">Get this from Google Calendar → Settings → Your Calendar → "Secret address in iCal format"</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <input type="color" class="ics-color" value="${feed?.color || '#3b82f6'}" style="width:60px;height:32px;border:none;cursor:pointer;">
+        </div>
+        <button class="btn btn-secondary" onclick="this.parentElement.remove()" style="margin-top:0.5rem">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function gatherIcsFeeds() {
+      const feeds = [];
+      document.querySelectorAll('.ics-feed-card').forEach(card => {
+        const url = card.querySelector('.ics-url')?.value?.trim();
+        if (url) {
+          feeds.push({
+            name: card.querySelector('.ics-name')?.value || 'Calendar',
+            url,
+            color: card.querySelector('.ics-color')?.value || '#3b82f6'
+          });
+        }
+      });
+      return feeds;
     }
 
     function calendarsToText(cals) { return (cals || []).map(c => `${c.id}, ${c.color}, ${c.name}`).join('\n'); }

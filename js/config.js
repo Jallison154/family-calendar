@@ -13,6 +13,7 @@ const CONFIG = {
   },
 
   googleCalendar: {
+    // Option 1: Google API (requires API key)
     accounts: [
       {
         name: 'Personal',
@@ -21,6 +22,11 @@ const CONFIG = {
           { id: 'primary', color: '#3b82f6', name: 'Personal' }
         ]
       }
+    ],
+    // Option 2: ICS Feeds (easier - no API key needed!)
+    // Get your ICS URL from Google Calendar Settings > Integrate calendar > Secret address in iCal format
+    icsFeeds: [
+      // { name: 'My Calendar', url: 'https://calendar.google.com/calendar/ical/...', color: '#3b82f6' }
     ],
     weeksAhead: 4,
     refreshInterval: 300000
