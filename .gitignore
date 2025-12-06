@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local config (keep your API keys safe!)
+js/config.local.js
+
+# Logs
+*.log
+
+# Dependencies (if you add any later)
+node_modules/
+
+
+
