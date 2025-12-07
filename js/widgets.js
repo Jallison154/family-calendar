@@ -214,26 +214,67 @@ class WeatherWidget {
 
   async updateFromHA() {
     const state = this.haClient?.entityStates?.get(this.config.weatherEntity);
-    if (!state) { this.showDemo(); return; }
+    if (!state) { 
+      console.warn('🌤️ Weather entity not found:', this.config.weatherEntity);
+      this.showDemo(); 
+      return; 
+    }
     
     const attrs = state.attributes;
     const forecast = (attrs.forecast || []).slice(0, 5);
     const condition = state.state;
     
+    // NWS and other weather integrations may use different attribute names
+    // Try multiple possible attribute names for feels_like/apparent temperature
+    const feelsLike = attrs.apparent_temperature || 
+                     attrs.feels_like || 
+                     attrs.feelslike || 
+                     attrs.temperature; // fallback to regular temp
+    
+    // Handle different forecast formats (NWS vs other integrations)
+    const processedForecast = forecast.map(f => {
+      // NWS forecast format uses 'datetime' or 'datetime' as ISO string
+      let forecastDate;
+      if (f.datetime) {
+        forecastDate = typeof f.datetime === 'string' ? new Date(f.datetime) : new Date(f.datetime);
+      } else if (f.date) {
+        forecastDate = typeof f.date === 'string' ? new Date(f.date) : new Date(f.date);
+      } else {
+        forecastDate = new Date(); // fallback
+      }
+      
+      // NWS uses 'condition' or 'condition_state'
+      const forecastCondition = f.condition || f.condition_state || f.weather || condition;
+      
+      // Temperature can be 'temperature' or 'temp' or 'temp_max'/'temp_min'
+      const high = f.temperature || f.temp || f.temp_max || f.high;
+      const low = f.templow || f.temp_low || f.temp_min || f.low;
+      
+      return {
+        date: forecastDate,
+        high: high ? Math.round(high) : null,
+        low: low ? Math.round(low) : null,
+        icon: this.getIcon(forecastCondition)
+      };
+    }).filter(f => f.high !== null || f.low !== null); // Filter out invalid forecasts
+    
+    console.log('🌤️ Weather from HA:', {
+      entity: this.config.weatherEntity,
+      condition,
+      temp: attrs.temperature,
+      feelsLike,
+      forecastCount: processedForecast.length
+    });
+    
     this.render({
       temp: Math.round(attrs.temperature || 0),
       icon: this.getIcon(condition),
-      humidity: attrs.humidity,
-      wind: Math.round(attrs.wind_speed || 0),
-      feelsLike: Math.round(attrs.temperature || 0),
-      unit: attrs.temperature_unit || '°',
+      humidity: attrs.humidity || attrs.humidity_value || null,
+      wind: Math.round(attrs.wind_speed || attrs.wind_speed_value || 0),
+      feelsLike: Math.round(feelsLike || attrs.temperature || 0),
+      unit: attrs.temperature_unit || '°F', // NWS typically uses °F
       condition,
-      forecast: forecast.map(f => ({
-        date: new Date(f.datetime),
-        high: Math.round(f.temperature),
-        low: f.templow ? Math.round(f.templow) : null,
-        icon: this.getIcon(f.condition)
-      }))
+      forecast: processedForecast
     });
   }
 
@@ -317,11 +358,30 @@ class WeatherWidget {
   getIcon(condition) {
     const c = (condition || '').toLowerCase();
     const map = {
-      'clear': '☀️', 'sunny': '☀️', 'clouds': '☁️', 'cloudy': '☁️',
-      'partlycloudy': '⛅', 'partly': '⛅', 'few': '⛅', 'scattered': '⛅',
-      'rain': '🌧️', 'rainy': '🌧️', 'drizzle': '🌦️', 'shower': '🌦️',
-      'snow': '🌨️', 'snowy': '🌨️', 'thunderstorm': '⛈️', 'thunder': '⛈️',
-      'fog': '🌫️', 'mist': '🌫️', 'haze': '🌫️', 'wind': '💨'
+      // Clear/Sunny
+      'clear': '☀️', 'sunny': '☀️', 'fair': '☀️', 'mostly clear': '☀️',
+      // Cloudy
+      'clouds': '☁️', 'cloudy': '☁️', 'overcast': '☁️', 'mostly cloudy': '☁️',
+      // Partly Cloudy
+      'partlycloudy': '⛅', 'partly': '⛅', 'partly cloudy': '⛅', 
+      'few': '⛅', 'scattered': '⛅', 'partly sunny': '⛅',
+      // Rain
+      'rain': '🌧️', 'rainy': '🌧️', 'pouring': '🌧️', 'heavy rain': '🌧️',
+      'drizzle': '🌦️', 'shower': '🌦️', 'showers': '🌦️', 'light rain': '🌦️',
+      // Snow
+      'snow': '🌨️', 'snowy': '🌨️', 'snowing': '🌨️', 'heavy snow': '🌨️',
+      'snow flurries': '🌨️', 'flurries': '🌨️', 'blizzard': '🌨️',
+      // Storms
+      'thunderstorm': '⛈️', 'thunder': '⛈️', 'storm': '⛈️', 'storms': '⛈️',
+      'lightning': '⛈️', 'thunderstorms': '⛈️',
+      // Fog/Mist
+      'fog': '🌫️', 'mist': '🌫️', 'haze': '🌫️', 'foggy': '🌫️',
+      // Wind
+      'wind': '💨', 'windy': '💨', 'breezy': '💨', 'gusty': '💨',
+      // NWS specific conditions
+      'sunny': '☀️', 'mostly sunny': '⛅', 'partly sunny': '⛅',
+      'isolated': '🌦️', 'scattered showers': '🌦️', 'chance of rain': '🌦️',
+      'sleet': '🌨️', 'freezing rain': '🌧️', 'freezing drizzle': '🌦️'
     };
     for (const [key, icon] of Object.entries(map)) {
       if (c.includes(key)) return icon;
