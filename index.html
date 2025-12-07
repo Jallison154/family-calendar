@@ -25,60 +25,6 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/weather-effects.css">
-  
-  <style>
-    /* Festive Overlay Styles */
-    #festive-overlay {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 9999;
-      background: rgba(0, 0, 0, 0.8);
-      padding: 2rem;
-      border-radius: 12px;
-      text-align: center;
-      pointer-events: none;
-      display: none;
-    }
-    
-    #festive-overlay h2 {
-      color: white;
-      margin-bottom: 1rem;
-      font-family: var(--font-main, 'Outfit', sans-serif);
-      font-size: 2rem;
-    }
-    
-    #festive-overlay p {
-      color: rgba(255, 255, 255, 0.6);
-      font-family: var(--font-main, 'Outfit', sans-serif);
-    }
-    
-    /* Snow Effect for Festive Overlay */
-    .festive-snowflake {
-      position: fixed;
-      top: -10px;
-      color: white;
-      font-size: 1em;
-      font-family: Arial, sans-serif;
-      text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-      user-select: none;
-      z-index: 9998;
-      pointer-events: none;
-      animation: festive-snowfall linear infinite;
-    }
-    
-    @keyframes festive-snowfall {
-      0% {
-        transform: translateY(0vh) translateX(0) rotate(0deg);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(100vh) translateX(var(--drift)) rotate(360deg);
-        opacity: 0;
-      }
-    }
-  </style>
 </head>
 <body>
   <!-- Background Layer (contains all background elements) -->
@@ -178,14 +124,6 @@
     </section>
   </main>
 
-  <!-- Festive Overlay (conditional) -->
-  <div id="festive-overlay">
-    <h2>❄️ Happy Holidays! ❄️</h2>
-    <p>Temporary festive content</p>
-  </div>
-
-  <!-- Load utilities and config first (synchronous, needed by other scripts) -->
-  <script src="js/utils.js"></script>
   <script src="js/config.js"></script>
   <!-- Load other scripts asynchronously after DOM is ready -->
   <script>

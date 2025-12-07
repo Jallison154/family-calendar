@@ -262,31 +262,6 @@
       .form-row { grid-template-columns: 1fr; }
       .header { padding: 1rem; }
     }
-    
-    /* Snow Effect */
-    .snowflake {
-      position: fixed;
-      top: -10px;
-      color: white;
-      font-size: 1em;
-      font-family: Arial, sans-serif;
-      text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-      user-select: none;
-      z-index: 1000;
-      pointer-events: none;
-      animation: snowfall linear infinite;
-    }
-    
-    @keyframes snowfall {
-      0% {
-        transform: translateY(0vh) translateX(0) rotate(0deg);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(100vh) translateX(var(--drift)) rotate(360deg);
-        opacity: 0;
-      }
-    }
   </style>
 </head>
 <body>
@@ -316,13 +291,6 @@
             <input type="checkbox" id="show-seconds" checked>
             <span>Show seconds</span>
           </label>
-        </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label class="form-checkbox">
-            <input type="checkbox" id="show-festive-overlay" onchange="updateFestiveDisplay(this.checked)">
-            <span>Show festive overlay</span>
-          </label>
-          <p class="form-hint">Enable holiday overlay and snow effect</p>
         </div>
       </div>
     </div>
@@ -461,68 +429,6 @@ New Year, 2026-01-01"></textarea>
 
   <div class="toast" id="toast">Saved!</div>
 
-  <!-- Festive Overlay (conditional) -->
-  <div id="festive-overlay" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999; background: rgba(0,0,0,0.8); padding: 2rem; border-radius: 12px; text-align: center; pointer-events: none; display: none;">
-    <h2 style="color: white; margin-bottom: 1rem;">❄️ Happy Holidays! ❄️</h2>
-    <p style="color: #a0a0b0;">Temporary festive content</p>
-  </div>
-
-  <script>
-    // Snow Effect (conditional)
-    let snowInterval = null;
-    
-    function createSnowflake() {
-      const snowflake = document.createElement('div');
-      snowflake.className = 'snowflake';
-      snowflake.innerHTML = '❄';
-      snowflake.style.left = Math.random() * 100 + '%';
-      snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's';
-      snowflake.style.opacity = Math.random();
-      snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
-      snowflake.style.setProperty('--drift', (Math.random() * 100 - 50) + 'px');
-      document.body.appendChild(snowflake);
-      
-      setTimeout(() => {
-        snowflake.remove();
-      }, 5000);
-    }
-    
-    function startSnowEffect() {
-      // Clear any existing interval
-      if (snowInterval) {
-        clearInterval(snowInterval);
-      }
-      
-      // Create snowflakes periodically
-      snowInterval = setInterval(createSnowflake, 300);
-      
-      // Create initial snowflakes
-      for (let i = 0; i < 20; i++) {
-        setTimeout(() => createSnowflake(), i * 100);
-      }
-    }
-    
-    function stopSnowEffect() {
-      if (snowInterval) {
-        clearInterval(snowInterval);
-        snowInterval = null;
-      }
-      // Remove all existing snowflakes
-      document.querySelectorAll('.snowflake').forEach(s => s.remove());
-    }
-    
-    function updateFestiveDisplay(enabled) {
-      const overlay = document.getElementById('festive-overlay');
-      if (enabled) {
-        overlay.style.display = 'block';
-        startSnowEffect();
-      } else {
-        overlay.style.display = 'none';
-        stopSnowEffect();
-      }
-    }
-  </script>
-
   <script>
     const STORAGE_KEY = 'familyDashboardSettings';
     let calendarAccountCount = 0;
@@ -536,9 +442,6 @@ New Year, 2026-01-01"></textarea>
       document.getElementById('greeting-name').value = s.display?.greetingName || '';
       document.getElementById('use-24hour').checked = s.display?.use24Hour || false;
       document.getElementById('show-seconds').checked = s.display?.showSeconds !== false;
-      const festiveEnabled = s.display?.showFestiveOverlay || false;
-      document.getElementById('show-festive-overlay').checked = festiveEnabled;
-      updateFestiveDisplay(festiveEnabled);
 
       document.getElementById('joke-interval').value = (s.dadJoke?.interval || 300000) / 60000;
 
@@ -569,7 +472,6 @@ New Year, 2026-01-01"></textarea>
           greetingName: document.getElementById('greeting-name').value,
           use24Hour: document.getElementById('use-24hour').checked,
           showSeconds: document.getElementById('show-seconds').checked,
-          showFestiveOverlay: document.getElementById('show-festive-overlay').checked,
           hideCursorAfter: 5000
         },
         dadJoke: {

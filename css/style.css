@@ -172,14 +172,11 @@ body.time-evening .time-display {
 
 .background-slide {
   will-change: opacity, transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .weather-effects {
   will-change: opacity;
   contain: strict;
-  transform: translateZ(0);
 }
 
 /* Optimize image rendering */

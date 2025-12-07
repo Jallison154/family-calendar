@@ -139,9 +139,6 @@ class Dashboard {
         this.modules.cursorHider.init();
       }
 
-      // Festive Overlay
-      this.initFestiveOverlay(display.showFestiveOverlay || false);
-
       this.setupKeyboard();
       this.setupVisibilityHandler();
       this.setupPerformanceMonitor();
@@ -233,97 +230,17 @@ class Dashboard {
     this.modules.weatherEffects?.setWeather(effect);
   }
 
-  initFestiveOverlay(enabled) {
-    const overlay = document.getElementById('festive-overlay');
-    if (!overlay) return;
-    
-    this.festiveSnowInterval = null;
-    
-    const createSnowflake = () => {
-      const snowflake = document.createElement('div');
-      snowflake.className = 'festive-snowflake';
-      snowflake.innerHTML = '❄';
-      snowflake.style.left = Math.random() * 100 + '%';
-      snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's';
-      snowflake.style.opacity = Math.random();
-      snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
-      snowflake.style.setProperty('--drift', (Math.random() * 100 - 50) + 'px');
-      document.body.appendChild(snowflake);
-      
-      setTimeout(() => {
-        snowflake.remove();
-      }, 5000);
-    };
-    
-    const startSnowEffect = () => {
-      if (this.festiveSnowInterval) {
-        clearInterval(this.festiveSnowInterval);
-      }
-      
-      this.festiveSnowInterval = setInterval(createSnowflake, 300);
-      
-      for (let i = 0; i < 20; i++) {
-        setTimeout(() => createSnowflake(), i * 100);
-      }
-    };
-    
-    const stopSnowEffect = () => {
-      if (this.festiveSnowInterval) {
-        clearInterval(this.festiveSnowInterval);
-        this.festiveSnowInterval = null;
-      }
-      document.querySelectorAll('.festive-snowflake').forEach(s => s.remove());
-    };
-    
-    const updateDisplay = (show) => {
-      if (show) {
-        overlay.style.display = 'block';
-        startSnowEffect();
-      } else {
-        overlay.style.display = 'none';
-        stopSnowEffect();
-      }
-    };
-    
-    updateDisplay(enabled);
-    
-    // Listen for setting changes
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'familyDashboardSettings') {
-        try {
-          const settings = JSON.parse(e.newValue || '{}');
-          updateDisplay(settings.display?.showFestiveOverlay || false);
-        } catch (err) {
-          console.warn('Error parsing festive overlay setting:', err);
-        }
-      }
-    });
-    
-    // Store methods for cleanup
-    this.stopFestiveSnow = stopSnowEffect;
-  }
-
   refresh() {
-    if (window.log) window.log.debug('🔄 Refreshing...');
+    console.log('🔄 Refreshing...');
     
     // Batch updates with requestAnimationFrame for smoother performance
-    if (window.batchDOMUpdates) {
-      window.batchDOMUpdates([
-        () => this.modules.calendar?.refresh(),
-        () => this.modules.weather?.update(),
-        () => this.modules.todaySummary?.update(),
-        () => this.modules.daySnippet?.update(),
-        () => this.modules.countdown?.render()
-      ]);
-    } else {
-      requestAnimationFrame(() => {
-        this.modules.calendar?.refresh();
-        this.modules.weather?.update();
-        this.modules.todaySummary?.update();
-        this.modules.daySnippet?.update();
-        this.modules.countdown?.render();
-      });
-    }
+    requestAnimationFrame(() => {
+      this.modules.calendar?.refresh();
+      this.modules.weather?.update();
+      this.modules.todaySummary?.update();
+      this.modules.daySnippet?.update();
+      this.modules.countdown?.render();
+    });
   }
 
   cleanup() {
@@ -331,7 +248,6 @@ class Dashboard {
     this.intervals.forEach(id => clearInterval(id));
     this.modules.homeAssistant?.disconnect();
     this.modules.slideshow?.stop();
-    this.stopFestiveSnow?.();
   }
 }
 
