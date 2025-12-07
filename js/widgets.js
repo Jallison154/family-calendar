@@ -150,7 +150,18 @@ class WeatherWidget {
     if (!this.widgetEl) return;
     
     this.update();
-    setInterval(() => this.update(), 600000);
+    // Throttle weather updates to every 10 minutes (600000ms)
+    if (window.throttle) {
+      this.updateInterval = setInterval(() => window.throttle(() => this.update(), 1000), 600000);
+    } else {
+      this.updateInterval = setInterval(() => this.update(), 600000);
+    }
+  }
+  
+  destroy() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
   }
   
   getSunData() {
@@ -449,7 +460,7 @@ class WeatherWidget {
         const safeAlt = this.escapeHtml(icon);
         // URL in src is safe - browser handles it, but we validate it's a string
         const safeUrl = String(iconUrl).replace(/"/g, '&quot;');
-        return `<img src="${safeUrl}" alt="${safeAlt}" class="weather-icon-img" style="width: 2rem; height: 2rem; object-fit: contain;">`;
+        return `<img src="${safeUrl}" alt="${safeAlt}" class="weather-icon-img" loading="eager" style="width: 2rem; height: 2rem; object-fit: contain;">`;
       }
       return `<span class="weather-icon">${icon}</span>`;
     };
@@ -481,7 +492,7 @@ class WeatherWidget {
           <div class="forecast-day">
             <div class="forecast-day-name">${i === 0 ? 'Today' : day.date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
             ${safeIconUrl ? 
-              `<img src="${safeIconUrl}" alt="${safeIconAlt}" class="forecast-icon-img" style="width: 1.5rem; height: 1.5rem; object-fit: contain;">` :
+              `<img src="${safeIconUrl}" alt="${safeIconAlt}" class="forecast-icon-img" loading="lazy" style="width: 1.5rem; height: 1.5rem; object-fit: contain;">` :
               `<div class="forecast-icon">${day.icon}</div>`
             }
             <div class="forecast-high">${day.high}°</div>

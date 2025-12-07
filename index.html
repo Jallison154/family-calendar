@@ -5,14 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050508">
   <meta name="color-scheme" content="dark">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="description" content="Family Dashboard - Smart home dashboard for always-on displays">
   <title>Dashboard</title>
   
-  <!-- Preload critical font -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&display=swap" as="style">
-  
+  <!-- Preconnect to external domains for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="dns-prefetch" href="https://api.allorigins.win">
+  <link rel="dns-prefetch" href="https://api.unsplash.com">
+  <link rel="dns-prefetch" href="https://api.openweathermap.org">
+  <link rel="dns-prefetch" href="https://www.googleapis.com">
+  <link rel="dns-prefetch" href="https://icanhazdadjoke.com">
+  
+  <!-- Optimized font loading - only load weights we actually use -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
   
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/animations.css">
@@ -176,13 +184,47 @@
     <p>Temporary festive content</p>
   </div>
 
+  <!-- Load utilities and config first (synchronous, needed by other scripts) -->
+  <script src="js/utils.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/timeTheme.js"></script>
-  <script src="js/unsplash.js"></script>
-  <script src="js/calendar.js"></script>
-  <script src="js/homeassistant.js"></script>
-  <script src="js/widgets.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Load other scripts asynchronously after DOM is ready -->
+  <script>
+    // Load scripts in correct order after DOM is ready
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+    
+    const loadAllScripts = async () => {
+      try {
+        // Load independent scripts in parallel
+        await Promise.all([
+          loadScript('js/settings.js'),
+          loadScript('js/timeTheme.js'),
+          loadScript('js/widgets.js'),
+          loadScript('js/unsplash.js'),
+          loadScript('js/calendar.js'),
+          loadScript('js/homeassistant.js')
+        ]);
+        // Load app.js last (depends on others)
+        await loadScript('js/app.js');
+      } catch (e) {
+        console.error('Failed to load scripts:', e);
+      }
+    };
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadAllScripts);
+    } else {
+      // DOM already ready
+      loadAllScripts();
+    }
+  </script>
 </body>
 </html>

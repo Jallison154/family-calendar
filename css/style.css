@@ -167,15 +167,31 @@ body.time-evening .time-display {
 .dashboard, .calendar-section, .weather-bar, .panel, .info-bar {
   will-change: auto;
   contain: layout style;
+  transform: translateZ(0); /* Force GPU acceleration */
 }
 
 .background-slide {
   will-change: opacity, transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .weather-effects {
   will-change: opacity;
   contain: strict;
+  transform: translateZ(0);
+}
+
+/* Optimize image rendering */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.weather-icon-img,
+.forecast-icon-img {
+  image-rendering: auto;
+  will-change: opacity;
 }
 
 html, body {

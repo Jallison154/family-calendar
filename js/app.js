@@ -304,16 +304,26 @@ class Dashboard {
   }
 
   refresh() {
-    console.log('🔄 Refreshing...');
+    if (window.log) window.log.debug('🔄 Refreshing...');
     
     // Batch updates with requestAnimationFrame for smoother performance
-    requestAnimationFrame(() => {
-      this.modules.calendar?.refresh();
-      this.modules.weather?.update();
-      this.modules.todaySummary?.update();
-      this.modules.daySnippet?.update();
-      this.modules.countdown?.render();
-    });
+    if (window.batchDOMUpdates) {
+      window.batchDOMUpdates([
+        () => this.modules.calendar?.refresh(),
+        () => this.modules.weather?.update(),
+        () => this.modules.todaySummary?.update(),
+        () => this.modules.daySnippet?.update(),
+        () => this.modules.countdown?.render()
+      ]);
+    } else {
+      requestAnimationFrame(() => {
+        this.modules.calendar?.refresh();
+        this.modules.weather?.update();
+        this.modules.todaySummary?.update();
+        this.modules.daySnippet?.update();
+        this.modules.countdown?.render();
+      });
+    }
   }
 
   cleanup() {
