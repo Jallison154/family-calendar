@@ -97,7 +97,8 @@ REPO_URL="${1:-https://github.com/Jallison154/family-calendar.git}"
 if [ -d "$WEB_DIR/.git" ]; then
     echo "🔄 Pulling latest changes..."
     cd $WEB_DIR
-    git pull
+    git fetch origin main
+    git reset --hard origin/main
 else
     echo "📥 Cloning repository..."
     git clone $REPO_URL $WEB_DIR
@@ -153,7 +154,8 @@ cat > /usr/local/bin/update-dashboard <<'SCRIPT'
 #!/bin/bash
 cd /var/www/family-calendar
 git config --global --add safe.directory /var/www/family-calendar
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 chown -R www-data:www-data /var/www/family-calendar
 echo "✅ Dashboard updated!"
 SCRIPT
