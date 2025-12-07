@@ -221,7 +221,33 @@ class WeatherWidget {
     }
     
     const attrs = state.attributes;
-    const forecast = (attrs.forecast || []).slice(0, 5);
+    
+    // Log raw forecast data to help debug
+    console.log('🌤️ Raw forecast data:', {
+      hasForecast: !!attrs.forecast,
+      forecastType: Array.isArray(attrs.forecast) ? 'array' : typeof attrs.forecast,
+      forecastLength: Array.isArray(attrs.forecast) ? attrs.forecast.length : 'N/A',
+      firstForecastItem: attrs.forecast?.[0],
+      allForecastKeys: attrs.forecast?.[0] ? Object.keys(attrs.forecast[0]) : []
+    });
+    
+    // NWS forecast might be in different locations
+    let forecast = attrs.forecast || attrs.hourly_forecast || attrs.daily_forecast || [];
+    
+    // If forecast is not an array, try to convert it
+    if (!Array.isArray(forecast)) {
+      if (typeof forecast === 'object' && forecast !== null) {
+        // Try to extract array from object
+        forecast = forecast.forecast || forecast.daily || forecast.hourly || [];
+      }
+      if (!Array.isArray(forecast)) {
+        console.warn('🌤️ Forecast is not an array:', forecast);
+        forecast = [];
+      }
+    }
+    
+    // Limit to 5 days
+    forecast = forecast.slice(0, 5);
     const condition = state.state;
     
     // NWS and other weather integrations may use different attribute names
@@ -232,38 +258,93 @@ class WeatherWidget {
                      attrs.temperature; // fallback to regular temp
     
     // Handle different forecast formats (NWS vs other integrations)
-    const processedForecast = forecast.map(f => {
-      // NWS forecast format uses 'datetime' or 'datetime' as ISO string
+    const processedForecast = forecast.map((f, index) => {
+      // NWS forecast format uses 'datetime' as ISO string or timestamp
       let forecastDate;
       if (f.datetime) {
-        forecastDate = typeof f.datetime === 'string' ? new Date(f.datetime) : new Date(f.datetime);
+        // Handle ISO string or timestamp
+        if (typeof f.datetime === 'string') {
+          forecastDate = new Date(f.datetime);
+        } else if (typeof f.datetime === 'number') {
+          // Could be Unix timestamp (seconds) or milliseconds
+          forecastDate = f.datetime < 10000000000 ? new Date(f.datetime * 1000) : new Date(f.datetime);
+        } else {
+          forecastDate = new Date(f.datetime);
+        }
       } else if (f.date) {
         forecastDate = typeof f.date === 'string' ? new Date(f.date) : new Date(f.date);
+      } else if (f.timestamp) {
+        forecastDate = f.timestamp < 10000000000 ? new Date(f.timestamp * 1000) : new Date(f.timestamp);
       } else {
-        forecastDate = new Date(); // fallback
+        // Fallback: use today + index days
+        forecastDate = new Date();
+        forecastDate.setDate(forecastDate.getDate() + index);
+        forecastDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
       }
       
-      // NWS uses 'condition' or 'condition_state'
-      const forecastCondition = f.condition || f.condition_state || f.weather || condition;
+      // Validate date
+      if (isNaN(forecastDate.getTime())) {
+        console.warn('🌤️ Invalid forecast date:', f.datetime || f.date || f.timestamp);
+        forecastDate = new Date();
+        forecastDate.setDate(forecastDate.getDate() + index);
+      }
+      
+      // NWS uses 'condition' or 'condition_state' or 'weather'
+      const forecastCondition = f.condition || 
+                               f.condition_state || 
+                               f.weather || 
+                               f.condition_state_short ||
+                               condition;
       
       // Temperature can be 'temperature' or 'temp' or 'temp_max'/'temp_min'
-      const high = f.temperature || f.temp || f.temp_max || f.high;
-      const low = f.templow || f.temp_low || f.temp_min || f.low;
+      // NWS uses 'temperature' for high and 'templow' for low
+      const high = f.temperature !== undefined ? f.temperature :
+                   f.temp !== undefined ? f.temp :
+                   f.temp_max !== undefined ? f.temp_max :
+                   f.high !== undefined ? f.high :
+                   f.max_temp !== undefined ? f.max_temp :
+                   null;
       
-      return {
+      const low = f.templow !== undefined ? f.templow :
+                  f.temp_low !== undefined ? f.temp_low :
+                  f.temp_min !== undefined ? f.temp_min :
+                  f.low !== undefined ? f.low :
+                  f.min_temp !== undefined ? f.min_temp :
+                  null;
+      
+      const result = {
         date: forecastDate,
-        high: high ? Math.round(high) : null,
-        low: low ? Math.round(low) : null,
+        high: high !== null && high !== undefined ? Math.round(high) : null,
+        low: low !== null && low !== undefined ? Math.round(low) : null,
         icon: this.getIcon(forecastCondition)
       };
-    }).filter(f => f.high !== null || f.low !== null); // Filter out invalid forecasts
+      
+      // Log each forecast item for debugging
+      if (index === 0) {
+        console.log('🌤️ First forecast item processed:', {
+          original: f,
+          processed: result
+        });
+      }
+      
+      return result;
+    }).filter(f => {
+      // Only include forecasts with at least a high temperature
+      const hasData = f.high !== null || f.low !== null;
+      if (!hasData) {
+        console.warn('🌤️ Filtered out forecast item (no temp data):', f);
+      }
+      return hasData;
+    });
     
     console.log('🌤️ Weather from HA:', {
       entity: this.config.weatherEntity,
       condition,
       temp: attrs.temperature,
       feelsLike,
-      forecastCount: processedForecast.length
+      rawForecastCount: forecast.length,
+      processedForecastCount: processedForecast.length,
+      processedForecast: processedForecast
     });
     
     this.render({
