@@ -211,6 +211,32 @@ body {
 
 body.cursor-hidden { cursor: none; }
 
+/* Touchless display - hide cursor and disable all interactions */
+body {
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events only for background layer (for weather effects) */
+#background-layer {
+  pointer-events: auto;
+}
+
+/* Re-enable for main content (but no clickable elements) */
+.dashboard {
+  pointer-events: auto;
+}
+
+/* Ensure no elements are clickable */
+button, select, a, input, textarea {
+  pointer-events: none !important;
+  cursor: none !important;
+}
+
 /* Smooth transitions for time theme changes */
 .time-display,
 .greeting-text,
@@ -292,8 +318,8 @@ body.cursor-hidden { cursor: none; }
    ============================================ */
 
 .hero-header {
-  height: 35vh;
-  min-height: 300px;
+  height: 40vh;
+  min-height: 400px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -318,22 +344,11 @@ body.cursor-hidden { cursor: none; }
   gap: 1rem;
 }
 
-.nav-menu-btn {
-  background: none;
-  border: none;
+.nav-month-display {
+  font-size: 1.1rem;
+  font-weight: 500;
   color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.nav-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .family-name {
@@ -348,68 +363,31 @@ body.cursor-hidden { cursor: none; }
   gap: 0.75rem;
 }
 
-.nav-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 1rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.nav-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.nav-month-select {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 0.9rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: var(--font-main);
-}
-
-.nav-icon-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 1.2rem;
-  padding: 0.5rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.nav-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
 
 .header-content {
   flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 2rem 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem 2.5rem;
   position: relative;
   z-index: 2;
 }
 
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .header-greeting {
-  align-self: flex-end;
+  align-self: flex-start;
 }
 
 .greeting-text {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 500;
   color: white;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
@@ -417,14 +395,55 @@ body.cursor-hidden { cursor: none; }
 }
 
 .header-date {
-  align-self: flex-end;
+  align-self: flex-start;
 }
 
 .date-display {
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: 500;
   color: white;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-time {
+  line-height: 1;
+}
+
+.time-display {
+  font-size: 7rem;
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.3));
+}
+
+.time-ampm {
+  font-size: 2rem;
+  font-weight: 300;
+  vertical-align: super;
+  margin-left: 0.5rem;
+}
+
+.time-seconds {
+  font-size: 4rem;
+  font-weight: 200;
+  opacity: 0.7;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* ============================================
@@ -435,14 +454,14 @@ body.cursor-hidden { cursor: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
-  padding: 1.25rem 2rem;
+  gap: 1.5rem;
+  padding: 1rem 1.5rem;
   position: relative;
   z-index: 1;
-  background: var(--color-surface);
-  backdrop-filter: blur(var(--blur));
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
@@ -452,18 +471,20 @@ body.cursor-hidden { cursor: none; }
   gap: 1rem;
 }
 
-.weather-icon { font-size: 3rem; }
+.weather-icon { font-size: 2.5rem; }
 
 .weather-temp {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 200;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .weather-details {
   display: flex;
   gap: 1.5rem;
-  padding-left: 2rem;
-  border-left: 1px solid var(--color-border);
+  padding-left: 1.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .weather-detail {
@@ -473,41 +494,55 @@ body.cursor-hidden { cursor: none; }
 .weather-detail-value {
   font-size: 1.25rem;
   font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .weather-detail-label {
   font-size: 0.7rem;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .weather-forecast {
   display: flex;
   gap: 0.75rem;
-  padding-left: 2rem;
-  border-left: 1px solid var(--color-border);
+  padding-left: 1.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .forecast-day {
   text-align: center;
   padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
   min-width: 70px;
+  backdrop-filter: blur(10px);
 }
 
 .forecast-day-name {
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .forecast-icon { font-size: 1.5rem; margin: 0.25rem 0; }
-.forecast-high { font-size: 1rem; font-weight: 500; }
-.forecast-low { font-size: 0.875rem; color: var(--color-text-muted); }
+.forecast-high { 
+  font-size: 1rem; 
+  font-weight: 500; 
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.forecast-low { 
+  font-size: 0.875rem; 
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 
 /* ============================================
    Content Grid (Today + Joke)
@@ -692,24 +727,13 @@ body.cursor-hidden { cursor: none; }
   border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
   border: 2px solid transparent;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.family-tab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.family-tab.active {
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
 .family-tab-count {
@@ -1066,40 +1090,6 @@ body.cursor-hidden { cursor: none; }
   margin-top: auto;
 }
 
-/* Floating Action Button */
-.fab {
-  position: absolute;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: none;
-  color: white;
-  font-size: 2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
-  transition: all 0.3s ease;
-  z-index: 10;
-}
-
-.fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-}
-
-.fab:active {
-  transform: scale(0.95);
-}
-
-.fab-icon {
-  line-height: 1;
-  font-weight: 300;
-}
 
 /* ============================================
    Info Bar (Home + Countdown)

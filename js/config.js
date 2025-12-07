@@ -43,12 +43,13 @@ const CONFIG = {
   },
 
   weather: {
-    useHomeAssistant: true,
-    weatherEntity: 'weather.home',
+    useHomeAssistant: true,  // Always use Home Assistant for weather
+    weatherEntity: 'weather.home',  // Update this to your Home Assistant weather entity
     openWeatherMap: {
-      apiKey: 'YOUR_OPENWEATHERMAP_API_KEY',
-      lat: 40.7128,
-      lon: -74.0060,
+      // Not used when useHomeAssistant is true
+      apiKey: '',
+      lat: 0,
+      lon: 0,
       units: 'imperial'
     }
   },

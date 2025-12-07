@@ -42,48 +42,45 @@
   <main class="dashboard">
     <!-- Large Header Section with Background -->
     <header class="hero-header">
-      <!-- Top Navigation Bar -->
+      <!-- Top Navigation Bar (Display Only) -->
       <div class="header-nav">
         <div class="nav-left">
-          <button class="nav-menu-btn" id="menu-btn">
-            <span class="menu-icon">☰</span>
-          </button>
           <span class="family-name" id="family-name">York's Family</span>
         </div>
         <div class="nav-right">
-          <button class="nav-btn" id="prev-month-btn">←</button>
-          <select class="nav-month-select" id="month-select">
-            <option value="0">January</option>
-            <option value="1">February</option>
-            <option value="2">March</option>
-            <option value="3">April</option>
-            <option value="4">May</option>
-            <option value="5">June</option>
-            <option value="6">July</option>
-            <option value="7">August</option>
-            <option value="8">September</option>
-            <option value="9">October</option>
-            <option value="10">November</option>
-            <option value="11">December</option>
-          </select>
-          <button class="nav-btn" id="next-month-btn">→</button>
-          <button class="nav-icon-btn" id="calendar-icon-btn">📅</button>
-          <button class="nav-icon-btn" id="filter-btn">⚙</button>
+          <span class="nav-month-display" id="calendar-month">March 2025</span>
         </div>
       </div>
 
-      <!-- Greeting and Date Overlay -->
+      <!-- Header Content: Clock, Weather, Greeting, Date -->
       <div class="header-content">
-        <div class="header-greeting" id="greeting-widget">
-          <span class="greeting-text">Good morning York! 😊</span>
+        <!-- Left: Greeting -->
+        <div class="header-left">
+          <div class="header-greeting" id="greeting-widget">
+            <span class="greeting-text">Good morning York! 😊</span>
+          </div>
+          <div class="header-date" id="date-widget">
+            <span class="date-display">04 March</span>
+          </div>
         </div>
-        <div class="header-date" id="date-widget">
-          <span class="date-display">04 March</span>
+
+        <!-- Center: Large Clock -->
+        <div class="header-center">
+          <div class="hero-time" id="clock-widget">
+            <time class="time-display">12:00</time>
+          </div>
+        </div>
+
+        <!-- Right: Weather with Forecast -->
+        <div class="header-right">
+          <section class="weather-bar" id="weather-widget">
+            <!-- Rendered by JS -->
+          </section>
         </div>
       </div>
     </header>
 
-    <!-- Family Member Tabs -->
+    <!-- Family Member Tabs (Display Only) -->
     <section class="family-tabs" id="family-tabs">
       <!-- Rendered by JS -->
     </section>
@@ -93,10 +90,6 @@
       <div id="calendar-grid" class="calendar-grid">
         <!-- Rendered by JS -->
       </div>
-      <!-- Floating Action Button -->
-      <button class="fab" id="fab-btn">
-        <span class="fab-icon">+</span>
-      </button>
     </section>
   </main>
 

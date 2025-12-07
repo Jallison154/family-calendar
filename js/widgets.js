@@ -170,10 +170,17 @@ class WeatherWidget {
 
   async update() {
     try {
+      // Prioritize Home Assistant if configured
       if (this.config.useHomeAssistant && this.haClient?.isConnected) {
         await this.updateFromHA();
+      } else if (this.config.useHomeAssistant) {
+        // Home Assistant is configured but not connected yet
+        console.warn('🌤️ Home Assistant not connected yet, waiting...');
+        // Will retry on next update interval
+        this.showDemo();
       } else if (this.config.openWeatherMap?.apiKey && 
-                 this.config.openWeatherMap.apiKey !== 'YOUR_OPENWEATHERMAP_API_KEY') {
+                 this.config.openWeatherMap.apiKey !== 'YOUR_OPENWEATHERMAP_API_KEY' &&
+                 this.config.openWeatherMap.apiKey !== '') {
         await this.updateFromOWM();
       } else {
         this.showDemo();
