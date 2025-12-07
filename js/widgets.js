@@ -337,25 +337,72 @@ class WeatherWidget {
       return hasData;
     });
     
+    // Get icon from Home Assistant (entity_picture is a URL to the weather icon)
+    const haIconUrl = attrs.entity_picture;
+    let currentIcon = this.getIcon(condition); // Fallback to emoji
+    
+    // Convert relative URL to absolute if needed
+    let currentIconUrl = null;
+    if (haIconUrl) {
+      if (haIconUrl.startsWith('http://') || haIconUrl.startsWith('https://')) {
+        currentIconUrl = haIconUrl;
+      } else if (this.haClient?.config?.url) {
+        // Relative URL - make it absolute
+        const baseUrl = this.haClient.config.url.replace(/\/$/, '');
+        currentIconUrl = baseUrl + haIconUrl;
+      }
+    }
+    
+    // Update forecast items to use HA icons if available
+    const forecastWithIcons = processedForecast.map((f, index) => {
+      const forecastItem = forecast[index];
+      let forecastIcon = f.icon; // Default to emoji
+      let forecastIconUrl = null;
+      
+      // Check if forecast item has an icon URL
+      if (forecastItem) {
+        const forecastIconAttr = forecastItem.entity_picture || 
+                                 forecastItem.icon || 
+                                 forecastItem.condition_icon;
+        
+        if (forecastIconAttr) {
+          if (forecastIconAttr.startsWith('http://') || forecastIconAttr.startsWith('https://')) {
+            forecastIconUrl = forecastIconAttr;
+          } else if (this.haClient?.config?.url) {
+            const baseUrl = this.haClient.config.url.replace(/\/$/, '');
+            forecastIconUrl = baseUrl + forecastIconAttr;
+          }
+        }
+      }
+      
+      return {
+        ...f,
+        icon: forecastIcon,
+        iconUrl: forecastIconUrl
+      };
+    });
+    
     console.log('🌤️ Weather from HA:', {
       entity: this.config.weatherEntity,
       condition,
       temp: attrs.temperature,
       feelsLike,
+      hasIconUrl: !!currentIconUrl,
+      iconUrl: currentIconUrl,
       rawForecastCount: forecast.length,
-      processedForecastCount: processedForecast.length,
-      processedForecast: processedForecast
+      processedForecastCount: processedForecast.length
     });
     
     this.render({
       temp: Math.round(attrs.temperature || 0),
-      icon: this.getIcon(condition),
+      icon: currentIcon,
+      iconUrl: currentIconUrl, // Add icon URL
       humidity: attrs.humidity || attrs.humidity_value || null,
       wind: Math.round(attrs.wind_speed || attrs.wind_speed_value || 0),
       feelsLike: Math.round(feelsLike || attrs.temperature || 0),
       unit: attrs.temperature_unit || '°F', // NWS typically uses °F
       condition,
-      forecast: processedForecast
+      forecast: forecastWithIcons
     });
   }
 
@@ -388,10 +435,28 @@ class WeatherWidget {
     }
   }
 
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
   render(data) {
+    // Helper to render icon (image if URL available, emoji otherwise)
+    const renderIcon = (icon, iconUrl) => {
+      if (iconUrl) {
+        // Escape the alt text for safety
+        const safeAlt = this.escapeHtml(icon);
+        // URL in src is safe - browser handles it, but we validate it's a string
+        const safeUrl = String(iconUrl).replace(/"/g, '&quot;');
+        return `<img src="${safeUrl}" alt="${safeAlt}" class="weather-icon-img" style="width: 2rem; height: 2rem; object-fit: contain;">`;
+      }
+      return `<span class="weather-icon">${icon}</span>`;
+    };
+    
     const newHtml = `
       <div class="weather-current">
-        <span class="weather-icon">${data.icon}</span>
+        ${renderIcon(data.icon, data.iconUrl)}
         <span class="weather-temp">${data.temp}${data.unit}</span>
       </div>
       <div class="weather-details">
@@ -409,14 +474,21 @@ class WeatherWidget {
         </div>
       </div>
       <div class="weather-forecast">
-        ${data.forecast.map((day, i) => `
+        ${data.forecast.map((day, i) => {
+          const safeIconAlt = this.escapeHtml(day.icon);
+          const safeIconUrl = day.iconUrl ? String(day.iconUrl).replace(/"/g, '&quot;') : null;
+          return `
           <div class="forecast-day">
             <div class="forecast-day-name">${i === 0 ? 'Today' : day.date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-            <div class="forecast-icon">${day.icon}</div>
+            ${safeIconUrl ? 
+              `<img src="${safeIconUrl}" alt="${safeIconAlt}" class="forecast-icon-img" style="width: 1.5rem; height: 1.5rem; object-fit: contain;">` :
+              `<div class="forecast-icon">${day.icon}</div>`
+            }
             <div class="forecast-high">${day.high}°</div>
             <div class="forecast-low">${day.low}°</div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     `;
 
