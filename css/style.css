@@ -467,16 +467,23 @@ body.cursor-hidden { cursor: none; }
   flex-shrink: 0;
   position: relative;
   z-index: 1;
+  /* Ensure panels inside have proper stacking context */
+  isolation: isolate;
 }
 
 .panel {
   background: var(--color-surface);
-  backdrop-filter: blur(var(--blur));
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   overflow: hidden;
   position: relative;
   z-index: 1;
+  /* Ensure backdrop-filter works properly and blocks content behind */
+  isolation: isolate;
+  /* Add a slightly more opaque layer to ensure blur is visible */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .panel-header {
