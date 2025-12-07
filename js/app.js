@@ -139,6 +139,12 @@ class Dashboard {
         this.modules.cursorHider.init();
       }
 
+      // Family tabs
+      this.initFamilyTabs();
+      
+      // Calendar navigation
+      this.setupCalendarNavigation();
+
       this.setupKeyboard();
       this.setupVisibilityHandler();
       this.setupPerformanceMonitor();
@@ -230,6 +236,99 @@ class Dashboard {
     this.modules.weatherEffects?.setWeather(effect);
   }
 
+  initFamilyTabs() {
+    const tabsEl = document.getElementById('family-tabs');
+    if (!tabsEl) return;
+
+    // Default family members (can be configured later)
+    const familyMembers = [
+      { id: 'david', name: 'Da David', color: 'red', count: '2/5' },
+      { id: 'emily', name: 'Em Emily', color: 'purple', count: '2/3' },
+      { id: 'lucas', name: 'Lu Lucas', color: 'yellow', count: '3/4' }
+    ];
+
+    this.activeFamilyFilter = null;
+
+    const renderTabs = () => {
+      tabsEl.innerHTML = familyMembers.map(member => `
+        <div class="family-tab color-${member.color} ${this.activeFamilyFilter === member.id ? 'active' : ''}" 
+             data-member="${member.id}">
+          <span>${member.name}</span>
+          <span class="family-tab-count">${member.count}</span>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      tabsEl.querySelectorAll('.family-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const memberId = tab.dataset.member;
+          if (this.activeFamilyFilter === memberId) {
+            this.activeFamilyFilter = null;
+          } else {
+            this.activeFamilyFilter = memberId;
+          }
+          renderTabs();
+          // Filter calendar events
+          this.modules.calendar?.render();
+        });
+      });
+    };
+
+    renderTabs();
+  }
+
+  setupCalendarNavigation() {
+    const prevBtn = document.getElementById('prev-month-btn');
+    const nextBtn = document.getElementById('next-month-btn');
+    const monthSelect = document.getElementById('month-select');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (this.modules.calendar) {
+          const currentDate = this.modules.calendar.today || new Date();
+          currentDate.setMonth(currentDate.getMonth() - 1);
+          this.modules.calendar.today = currentDate;
+          this.modules.calendar.render();
+          this.updateMonthSelect();
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (this.modules.calendar) {
+          const currentDate = this.modules.calendar.today || new Date();
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          this.modules.calendar.today = currentDate;
+          this.modules.calendar.render();
+          this.updateMonthSelect();
+        }
+      });
+    }
+
+    if (monthSelect) {
+      monthSelect.addEventListener('change', (e) => {
+        if (this.modules.calendar) {
+          const selectedMonth = parseInt(e.target.value);
+          const currentDate = this.modules.calendar.today || new Date();
+          currentDate.setMonth(selectedMonth);
+          this.modules.calendar.today = currentDate;
+          this.modules.calendar.render();
+        }
+      });
+    }
+
+    // Update month select when calendar renders
+    this.updateMonthSelect();
+  }
+
+  updateMonthSelect() {
+    const monthSelect = document.getElementById('month-select');
+    if (monthSelect && this.modules.calendar?.today) {
+      monthSelect.value = this.modules.calendar.today.getMonth();
+    }
+  }
+
   refresh() {
     console.log('🔄 Refreshing...');
     
@@ -240,6 +339,7 @@ class Dashboard {
       this.modules.todaySummary?.update();
       this.modules.daySnippet?.update();
       this.modules.countdown?.render();
+      this.updateMonthSelect();
     });
   }
 

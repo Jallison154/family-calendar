@@ -335,25 +335,14 @@ class GoogleCalendarWidget {
   render() {
     if (!this.gridEl) return;
     
-    this.today = new Date();
-    this.today.setHours(0, 0, 0, 0);
+    // Use existing today date or create new one
+    if (!this.today) {
+      this.today = new Date();
+      this.today.setHours(0, 0, 0, 0);
+    }
     
     const days = this.generateDays();
     const eventsByDate = this.groupEventsByDate();
-    
-    // Update month label with fade
-    const monthEl = document.getElementById('calendar-month');
-    if (monthEl) {
-      const middleDate = days[Math.floor(days.length / 2)]?.date || new Date();
-      const newMonth = middleDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      if (monthEl.textContent !== newMonth) {
-        monthEl.style.opacity = '0';
-        setTimeout(() => {
-          monthEl.textContent = newMonth;
-          monthEl.style.opacity = '1';
-        }, 300);
-      }
-    }
     
     let html = '';
     

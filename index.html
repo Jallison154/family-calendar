@@ -40,87 +40,63 @@
 
   <!-- Dashboard -->
   <main class="dashboard">
-    <!-- Hero: Time & Date -->
-    <header class="hero">
-      <div class="hero-greeting" id="greeting-widget">
-        <span class="greeting-text">Good Morning</span>
+    <!-- Large Header Section with Background -->
+    <header class="hero-header">
+      <!-- Top Navigation Bar -->
+      <div class="header-nav">
+        <div class="nav-left">
+          <button class="nav-menu-btn" id="menu-btn">
+            <span class="menu-icon">☰</span>
+          </button>
+          <span class="family-name" id="family-name">York's Family</span>
+        </div>
+        <div class="nav-right">
+          <button class="nav-btn" id="prev-month-btn">←</button>
+          <select class="nav-month-select" id="month-select">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+          <button class="nav-btn" id="next-month-btn">→</button>
+          <button class="nav-icon-btn" id="calendar-icon-btn">📅</button>
+          <button class="nav-icon-btn" id="filter-btn">⚙</button>
+        </div>
       </div>
-      <div class="hero-time" id="clock-widget">
-        <time class="time-display">12:00</time>
-      </div>
-      <div class="hero-date">
-        <span class="date-display">Friday, December 5</span>
-      </div>
-      <div class="hero-snippet" id="day-snippet">
-        <span class="snippet-text">Loading your day...</span>
+
+      <!-- Greeting and Date Overlay -->
+      <div class="header-content">
+        <div class="header-greeting" id="greeting-widget">
+          <span class="greeting-text">Good morning York! 😊</span>
+        </div>
+        <div class="header-date" id="date-widget">
+          <span class="date-display">04 March</span>
+        </div>
       </div>
     </header>
 
-    <!-- Weather Bar -->
-    <section class="weather-bar" id="weather-widget">
+    <!-- Family Member Tabs -->
+    <section class="family-tabs" id="family-tabs">
       <!-- Rendered by JS -->
     </section>
 
-    <!-- Content Grid -->
-    <div class="content-grid">
-      <!-- Today's Schedule -->
-      <section class="panel today-panel">
-        <div class="panel-header">
-          <div class="panel-icon">📋</div>
-          <div class="panel-title">Today's Schedule</div>
-        </div>
-        <div class="panel-body" id="today-summary">
-          <!-- Rendered by JS -->
-        </div>
-      </section>
-
-      <!-- Dad Joke -->
-      <section class="panel joke-panel" id="dadjoke-widget">
-        <div class="panel-header">
-          <div class="panel-icon">😄</div>
-          <div class="panel-title">Dad Joke</div>
-        </div>
-        <div class="panel-body">
-          <div class="joke-content">Loading...</div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Info Bar: Home + Countdown -->
-    <div class="info-bar">
-      <div class="info-section ha-section" id="homeassistant-widget">
-        <div class="info-header">
-          <span class="info-icon">🏠</span>
-          <span class="info-title">Home</span>
-          <span class="ha-status" id="ha-status">
-            <span class="status-dot"></span>
-          </span>
-        </div>
-        <div class="entity-grid" id="entity-grid"></div>
-      </div>
-
-      <div class="info-divider"></div>
-
-      <div class="info-section countdown-section" id="countdown-widget">
-        <div class="info-header">
-          <span class="info-icon">🎯</span>
-          <span class="info-title">Coming Up</span>
-        </div>
-        <div class="countdown-grid" id="countdown-list"></div>
-      </div>
-    </div>
-
-    <!-- Calendar (at bottom) -->
+    <!-- Calendar Section -->
     <section class="calendar-section">
-      <div class="calendar-header-bar">
-        <div class="calendar-title">
-          <span class="calendar-icon">📅</span>
-          <span id="calendar-month">December 2025</span>
-        </div>
-      </div>
       <div id="calendar-grid" class="calendar-grid">
         <!-- Rendered by JS -->
       </div>
+      <!-- Floating Action Button -->
+      <button class="fab" id="fab-btn">
+        <span class="fab-icon">+</span>
+      </button>
     </section>
   </main>
 

@@ -68,14 +68,12 @@ class ClockWidget {
       }
     }
     
-    // Date - fade on change
+    // Date - fade on change (new format: "04 March")
     const dateEl = document.querySelector('.date-display');
     if (dateEl) {
-      const newDate = now.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      });
+      const day = now.getDate().toString().padStart(2, '0');
+      const month = now.toLocaleDateString('en-US', { month: 'long' });
+      const newDate = `${day} ${month}`;
       
       if (newDate !== this.lastDate) {
         dateEl.style.opacity = '0';
@@ -106,12 +104,14 @@ class GreetingWidget {
 
   update() {
     const hour = new Date().getHours();
-    let greeting = 'Good Evening';
-    if (hour >= 5 && hour < 12) greeting = 'Good Morning';
-    else if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
-    else if (hour >= 21 || hour < 5) greeting = 'Good Night';
+    let greeting = 'Good evening';
+    if (hour >= 5 && hour < 12) greeting = 'Good morning';
+    else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+    else if (hour >= 21 || hour < 5) greeting = 'Good night';
 
-    const fullGreeting = this.config.name ? `${greeting}, ${this.config.name}` : greeting;
+    const name = this.config.name || 'York';
+    const emoji = hour >= 5 && hour < 12 ? '😊' : hour >= 12 && hour < 17 ? '☀️' : hour >= 17 && hour < 21 ? '🌆' : '🌙';
+    const fullGreeting = `${greeting} ${name}! ${emoji}`;
 
     const textEl = document.querySelector('.greeting-text');
     if (textEl && fullGreeting !== this.lastGreeting) {
