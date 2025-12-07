@@ -214,6 +214,7 @@ class SettingsManager {
       },
       googleCalendar: {
         accounts: this.gatherCalendarAccounts(),
+        icsFeeds: this.gatherIcsFeeds(),
         weeksAhead: 4,
         refreshInterval: 300000
       },
@@ -275,6 +276,27 @@ class SettingsManager {
     });
     
     return accounts;
+  }
+
+  /**
+   * Gather ICS feeds from form
+   */
+  gatherIcsFeeds() {
+    const feeds = [];
+    const feedEls = document.querySelectorAll('.ics-feed-card');
+    
+    feedEls.forEach(el => {
+      const url = el.querySelector('.ics-url')?.value?.trim();
+      if (url) {
+        feeds.push({
+          name: el.querySelector('.ics-name')?.value || 'Calendar',
+          url,
+          color: el.querySelector('.ics-color')?.value || '#3b82f6'
+        });
+      }
+    });
+    
+    return feeds;
   }
 
   /**

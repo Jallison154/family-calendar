@@ -32,6 +32,12 @@ class GoogleCalendarWidget {
     this.gridEl = document.getElementById('calendar-grid');
     if (!this.gridEl) return;
 
+    console.log('📅 Calendar config:', {
+      accounts: this.config.accounts.length,
+      icsFeeds: this.config.icsFeeds.length,
+      icsFeedUrls: this.config.icsFeeds.map(f => f.url)
+    });
+
     const hasApiConfig = this.config.accounts.some(a => 
       a.apiKey && a.apiKey !== 'YOUR_GOOGLE_CALENDAR_API_KEY' && a.calendars?.length
     );
@@ -39,9 +45,12 @@ class GoogleCalendarWidget {
     const hasIcsFeeds = this.config.icsFeeds.some(f => f.url && f.url.trim());
 
     if (!hasApiConfig && !hasIcsFeeds) {
+      console.warn('📅 No calendar configuration found - showing empty calendar');
       this.loadDemoEvents();
     } else {
+      console.log('📅 Fetching calendar events...');
       await this.fetchEvents();
+      console.log(`📅 Loaded ${this.events.length} events`);
     }
 
     this.render();
@@ -72,12 +81,17 @@ class GoogleCalendarWidget {
     
     // Fetch from ICS feeds
     for (const feed of this.config.icsFeeds) {
-      if (!feed.url || !feed.url.trim()) continue;
+      if (!feed.url || !feed.url.trim()) {
+        console.warn(`📅 Skipping ICS feed "${feed.name}" - no URL provided`);
+        continue;
+      }
       try {
+        console.log(`📅 Fetching ICS feed: ${feed.name} (${feed.url})`);
         const events = await this.fetchIcsFeed(feed, now, end);
+        console.log(`📅 Loaded ${events.length} events from ${feed.name}`);
         allEvents.push(...events);
       } catch (e) {
-        console.warn(`ICS feed error (${feed.name}):`, e.message);
+        console.error(`📅 ICS feed error (${feed.name}):`, e.message, e);
       }
     }
     
@@ -114,11 +128,24 @@ class GoogleCalendarWidget {
     // Use CORS proxy to fetch ICS
     const proxyUrl = this.config.corsProxy + encodeURIComponent(feed.url);
     
+    console.log(`📅 Fetching ICS from proxy: ${proxyUrl.substring(0, 100)}...`);
+    
     const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error(`Failed to fetch ICS: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(`Failed to fetch ICS: ${res.status} ${res.statusText}. ${errorText.substring(0, 100)}`);
+    }
     
     const icsText = await res.text();
-    return this.parseIcs(icsText, feed, startRange, endRange);
+    if (!icsText || icsText.trim().length === 0) {
+      throw new Error('ICS feed returned empty response');
+    }
+    
+    console.log(`📅 Parsing ICS feed (${icsText.length} characters)`);
+    const events = this.parseIcs(icsText, feed, startRange, endRange);
+    console.log(`📅 Parsed ${events.length} events from ICS feed`);
+    
+    return events;
   }
 
   parseIcs(icsText, feed, startRange, endRange) {
