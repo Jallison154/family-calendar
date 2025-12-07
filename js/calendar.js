@@ -124,9 +124,74 @@ class GoogleCalendarWidget {
     }));
   }
 
+  /**
+   * Convert Google Calendar web URL to ICS feed URL
+   * Handles various URL formats:
+   * - https://calendar.google.com/calendar/u/1?cid=... (web URL with cid parameter)
+   * - https://calendar.google.com/calendar/ical/.../basic.ics (already ICS format)
+   * - Direct calendar ID (email address)
+   */
+  normalizeIcsUrl(url) {
+    if (!url || !url.trim()) return url;
+    
+    url = url.trim();
+    
+    // Already an ICS URL
+    if (url.includes('/ical/') && url.includes('.ics')) {
+      return url;
+    }
+    
+    // Web URL with cid parameter (base64 encoded calendar ID)
+    const cidMatch = url.match(/[?&]cid=([^&]+)/);
+    if (cidMatch) {
+      try {
+        // Try to decode base64
+        const decoded = atob(cidMatch[1].replace(/-/g, '+').replace(/_/g, '/'));
+        // URL encode the calendar ID
+        const calendarId = encodeURIComponent(decoded);
+        return `https://calendar.google.com/calendar/ical/${calendarId}/basic.ics`;
+      } catch (e) {
+        // If base64 decode fails, try using the cid value directly
+        const calendarId = encodeURIComponent(cidMatch[1]);
+        return `https://calendar.google.com/calendar/ical/${calendarId}/basic.ics`;
+      }
+    }
+    
+    // Check if it's a calendar.google.com URL without /ical/
+    if (url.includes('calendar.google.com') && !url.includes('/ical/')) {
+      // Try to extract calendar ID from various URL formats
+      const idMatch = url.match(/calendar\.google\.com\/calendar\/(?:u\/\d+\/)?([^/?&]+)/);
+      if (idMatch && idMatch[1] && idMatch[1] !== 'u') {
+        const calendarId = encodeURIComponent(idMatch[1]);
+        return `https://calendar.google.com/calendar/ical/${calendarId}/basic.ics`;
+      }
+    }
+    
+    // If it looks like an email address or calendar ID, convert directly
+    if (url.includes('@') && !url.startsWith('http')) {
+      const calendarId = encodeURIComponent(url);
+      return `https://calendar.google.com/calendar/ical/${calendarId}/basic.ics`;
+    }
+    
+    // If it's a full URL but not recognized format, try appending /ical/.../basic.ics
+    // This is a fallback - might not work for all formats
+    if (url.startsWith('http') && !url.includes('/ical/')) {
+      console.warn(`📅 Unrecognized calendar URL format: ${url}. Attempting to use as-is.`);
+    }
+    
+    return url;
+  }
+
   async fetchIcsFeed(feed, startRange, endRange) {
+    // Normalize the URL (convert web URLs to ICS feed URLs)
+    const normalizedUrl = this.normalizeIcsUrl(feed.url);
+    
+    if (normalizedUrl !== feed.url) {
+      console.log(`📅 Converted calendar URL: ${feed.url} → ${normalizedUrl}`);
+    }
+    
     // Use CORS proxy to fetch ICS
-    const proxyUrl = this.config.corsProxy + encodeURIComponent(feed.url);
+    const proxyUrl = this.config.corsProxy + encodeURIComponent(normalizedUrl);
     
     console.log(`📅 Fetching ICS from proxy: ${proxyUrl.substring(0, 100)}...`);
     

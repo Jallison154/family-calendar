@@ -364,7 +364,7 @@
       <div class="card-body">
         <p class="form-hint" style="margin-bottom: 1rem;">
           <strong>Easy setup - No API key needed!</strong><br>
-          Go to Google Calendar → Settings → Your Calendar → "Integrate calendar" → Copy "Secret address in iCal format"
+          You can paste either: (1) A Google Calendar web URL (the URL from your browser), or (2) An ICS feed URL from Google Calendar → Settings → Your Calendar → "Secret address in iCal format"
         </p>
         <div id="ics-feeds"></div>
         <button class="add-btn" onclick="addIcsFeed()">+ Add Calendar (ICS URL)</button>
@@ -702,9 +702,9 @@ New Year, 2026-01-01"></textarea>
           <input type="text" class="form-input ics-name" value="${feed?.name || ''}" placeholder="My Calendar">
         </div>
         <div class="form-group">
-          <label class="form-label">ICS URL</label>
-          <input type="url" class="form-input ics-url" value="${feed?.url || ''}" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
-          <div class="form-hint">Get this from Google Calendar → Settings → Your Calendar → "Secret address in iCal format"</div>
+          <label class="form-label">Calendar URL</label>
+          <input type="url" class="form-input ics-url" value="${feed?.url || ''}" placeholder="https://calendar.google.com/calendar/u/1?cid=... or ICS feed URL">
+          <div class="form-hint">Accepts: Google Calendar web URL (with cid parameter) or ICS feed URL. Web URLs are automatically converted.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Color</label>
