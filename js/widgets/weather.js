@@ -124,11 +124,19 @@ class WeatherWidget extends BaseWidget {
   }
 
   render(data) {
+    // If no data provided, show loading state
+    if (!data) {
+      this.showLoading();
+      return;
+    }
+    
     this.currentData = data;
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
-    const forecastHTML = data.forecast.map(f => {
+    // Ensure forecast is an array
+    const forecast = data.forecast || [];
+    const forecastHTML = forecast.map(f => {
       const dayName = f.date.toLocaleDateString('en-US', { weekday: 'short' });
       return `
         <div class="forecast-day">
