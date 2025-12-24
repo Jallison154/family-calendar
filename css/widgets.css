@@ -1,0 +1,273 @@
+/* ============================================
+   Widget-Specific Styles
+   ============================================ */
+
+/* Clock Widget */
+.widget-clock {
+  grid-column: span 4;
+  grid-row: span 3;
+}
+
+.clock-display {
+  font-size: 8rem;
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+.clock-date {
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Weather Widget */
+.widget-weather {
+  grid-column: span 4;
+  grid-row: span 3;
+}
+
+.weather-current {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.weather-icon {
+  font-size: 4rem;
+}
+
+.weather-temp {
+  font-size: 5rem;
+  font-weight: 200;
+  line-height: 1;
+}
+
+.weather-details {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.weather-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-detail-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.weather-detail-label {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.weather-forecast {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+}
+
+.forecast-day {
+  flex: 1;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  min-width: 100px;
+}
+
+.forecast-day-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.forecast-icon {
+  font-size: 2rem;
+  margin: 0.5rem 0;
+}
+
+.forecast-high {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.forecast-low {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+}
+
+/* Calendar Widget */
+.widget-calendar {
+  grid-column: span 12;
+  grid-row: span 7;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.calendar-day-name {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.75rem;
+}
+
+.calendar-day {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  overflow: hidden;
+}
+
+.calendar-day.is-today {
+  background: rgba(59, 130, 246, 0.2);
+  border: 2px solid var(--color-accent);
+}
+
+.calendar-day.is-past {
+  opacity: 0.4;
+}
+
+.calendar-day-num {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-day-events {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+
+.calendar-event {
+  padding: 0.5rem;
+  background: var(--event-color, var(--color-accent));
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Home Assistant Widget */
+.widget-homeassistant {
+  grid-column: span 6;
+  grid-row: span 2;
+}
+
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.entity-card {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.entity-name {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.entity-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+/* Dad Joke Widget */
+.widget-dadjoke {
+  grid-column: span 6;
+  grid-row: span 2;
+}
+
+.joke-content {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* Loading and Error States */
+.calendar-loading,
+.weather-loading,
+.ha-loading,
+.joke-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+}
+
+.calendar-error,
+.weather-error,
+.joke-error,
+.ha-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-error);
+  font-size: 1rem;
+}
+
+.weather-icon-img,
+.forecast-icon-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.calendar-event-more {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 0.5rem;
+  margin-top: auto;
+  font-style: italic;
+}
+

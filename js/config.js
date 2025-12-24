@@ -4,75 +4,98 @@
  */
 
 const CONFIG = {
+  // Unsplash Backgrounds
   unsplash: {
-    accessKey: 'YOUR_UNSPLASH_ACCESS_KEY',
-    searchQuery: 'nature landscape snow mountains',
+    accessKey: '',
+    searchQuery: 'nature landscape mountains',
     interval: 30000,
-    transitionDuration: 2500,
-    preloadCount: 5
+    transitionDuration: 2500
   },
 
+  // Google Calendar
   googleCalendar: {
-    // Option 1: Google API (requires API key)
-    accounts: [
-      {
-        name: 'Personal',
-        apiKey: 'YOUR_GOOGLE_CALENDAR_API_KEY',
-        calendars: [
-          { id: 'primary', color: '#3b82f6', name: 'Personal' }
-        ]
-      }
-    ],
-    // Option 2: ICS Feeds (easier - no API key needed!)
-    // Get your ICS URL from Google Calendar Settings > Integrate calendar > Secret address in iCal format
     icsFeeds: [
-      // { name: 'My Calendar', url: 'https://calendar.google.com/calendar/ical/...', color: '#3b82f6' }
+      // { name: 'Family Calendar', url: 'https://calendar.google.com/calendar/ical/...', color: '#3b82f6' }
     ],
     weeksAhead: 4,
     refreshInterval: 300000
   },
 
+  // Home Assistant
   homeAssistant: {
-    url: 'https://your-home-assistant.example.com',
-    accessToken: 'YOUR_HOME_ASSISTANT_TOKEN',
-    entities: [
-      { entityId: 'sensor.temperature', name: 'Temperature', icon: 'thermometer' },
-      { entityId: 'sensor.humidity', name: 'Humidity', icon: 'droplet' }
-    ],
+    url: '',
+    accessToken: '',
+    entities: [],
     refreshInterval: 30000
   },
 
+  // Weather (from Home Assistant)
   weather: {
-    useHomeAssistant: true,  // Always use Home Assistant for weather
-    weatherEntity: 'weather.home',  // Update this to your Home Assistant weather entity
-    openWeatherMap: {
-      // Not used when useHomeAssistant is true
-      apiKey: '',
-      lat: 0,
-      lon: 0,
-      units: 'imperial'
-    }
+    useHomeAssistant: true,
+    weatherEntity: 'weather.home'
   },
 
-  dadJoke: {
-    interval: 300000, // 5 minutes
-    enabled: true
-  },
-
-  countdowns: [
-    { name: '🎄 Christmas', date: '2025-12-25' },
-    { name: '🎆 New Year', date: '2026-01-01' },
-    { name: '🏖️ Beach Vacation', date: '2025-12-10' },
-    { name: '🎂 Mom\'s Birthday', date: '2025-12-07' }
-  ],
-
+  // Display Settings
   display: {
     use24Hour: false,
-    showSeconds: true,
-    greetingName: '',
-    hideCursorAfter: 5000
+    greetingName: 'Family',
+    visitorMode: false
+  },
+
+  // Layout (widget positions and sizes)
+  layout: {
+    widgets: [
+      {
+        id: 'clock',
+        type: 'clock',
+        gridColumn: '1 / 5',
+        gridRow: '1 / 4'
+      },
+      {
+        id: 'weather',
+        type: 'weather',
+        gridColumn: '5 / 9',
+        gridRow: '1 / 4'
+      },
+      {
+        id: 'calendar',
+        type: 'calendar',
+        gridColumn: '1 / 13',
+        gridRow: '4 / 11'
+      },
+      {
+        id: 'homeassistant',
+        type: 'homeassistant',
+        gridColumn: '1 / 7',
+        gridRow: '11 / 13'
+      },
+      {
+        id: 'dadjoke',
+        type: 'dadjoke',
+        gridColumn: '7 / 13',
+        gridRow: '11 / 13'
+      }
+    ]
   }
 };
+
+// Load from localStorage if available
+if (typeof Storage !== 'undefined') {
+  const stored = localStorage.getItem('familyDashboardConfig');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      Object.assign(CONFIG, parsed);
+    } catch (e) {
+      console.warn('Failed to parse stored config:', e);
+    }
+  }
+}
+
+// Export
+if (typeof window !== 'undefined') {
+  window.CONFIG = CONFIG;
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = CONFIG;

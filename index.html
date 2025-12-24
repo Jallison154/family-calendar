@@ -6,132 +6,52 @@
   <meta name="theme-color" content="#050508">
   <meta name="color-scheme" content="dark">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="description" content="Family Dashboard - Smart home dashboard for always-on displays">
-  <title>Dashboard</title>
+  <meta name="description" content="Family Calendar Dashboard - 4K Portrait Display">
+  <title>Family Calendar Dashboard</title>
   
-  <!-- Preconnect to external domains for faster loading -->
+  <!-- Preconnect to external domains -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://api.allorigins.win">
   <link rel="dns-prefetch" href="https://api.unsplash.com">
-  <link rel="dns-prefetch" href="https://api.openweathermap.org">
-  <link rel="dns-prefetch" href="https://www.googleapis.com">
   <link rel="dns-prefetch" href="https://icanhazdadjoke.com">
   
-  <!-- Optimized font loading - only load weights we actually use -->
+  <!-- Font loading -->
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
   
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/animations.css">
-  <link rel="stylesheet" href="css/weather-effects.css">
+  <link rel="stylesheet" href="css/widgets.css">
 </head>
 <body>
-  <!-- Background Layer (contains all background elements) -->
+  <!-- Background Layer -->
   <div id="background-layer">
     <div id="background-container">
       <div class="background-slide active"></div>
       <div class="background-slide"></div>
     </div>
     <div class="background-overlay"></div>
-    <!-- Weather Effects - inside background layer -->
     <div id="weather-effects" class="weather-effects"></div>
   </div>
 
-  <!-- Dashboard -->
-  <main class="dashboard">
-    <!-- Large Header Section with Background -->
-    <header class="hero-header">
-      <!-- Top Navigation Bar (Display Only) -->
-      <div class="header-nav">
-        <div class="nav-left">
-          <span class="family-name" id="family-name">York's Family</span>
-        </div>
-        <div class="nav-right">
-          <span class="nav-month-display" id="calendar-month">March 2025</span>
-        </div>
-      </div>
-
-      <!-- Header Content: Clock, Weather, Greeting, Date -->
-      <div class="header-content">
-        <!-- Left: Greeting -->
-        <div class="header-left">
-          <div class="header-greeting" id="greeting-widget">
-            <span class="greeting-text">Good morning York! 😊</span>
-          </div>
-          <div class="header-date" id="date-widget">
-            <span class="date-display">04 March</span>
-          </div>
-        </div>
-
-        <!-- Center: Large Clock -->
-        <div class="header-center">
-          <div class="hero-time" id="clock-widget">
-            <time class="time-display">12:00</time>
-          </div>
-        </div>
-
-        <!-- Right: Weather with Forecast -->
-        <div class="header-right">
-          <section class="weather-bar" id="weather-widget">
-            <!-- Rendered by JS -->
-          </section>
-        </div>
-      </div>
-    </header>
-
-    <!-- Family Member Tabs (Display Only) -->
-    <section class="family-tabs" id="family-tabs">
-      <!-- Rendered by JS -->
-    </section>
-
-    <!-- Calendar Section -->
-    <section class="calendar-section">
-      <div id="calendar-grid" class="calendar-grid">
-        <!-- Rendered by JS -->
-      </div>
-    </section>
+  <!-- Dashboard Container -->
+  <main class="dashboard" id="dashboard">
+    <!-- Widgets will be dynamically loaded here -->
   </main>
 
+  <!-- Scripts -->
   <script src="js/config.js"></script>
-  <!-- Load other scripts asynchronously after DOM is ready -->
-  <script>
-    // Load scripts in correct order after DOM is ready
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-    
-    const loadAllScripts = async () => {
-      try {
-        // Load independent scripts in parallel
-        await Promise.all([
-          loadScript('js/settings.js'),
-          loadScript('js/timeTheme.js'),
-          loadScript('js/widgets.js'),
-          loadScript('js/unsplash.js'),
-          loadScript('js/calendar.js'),
-          loadScript('js/homeassistant.js')
-        ]);
-        // Load app.js last (depends on others)
-        await loadScript('js/app.js');
-      } catch (e) {
-        console.error('Failed to load scripts:', e);
-      }
-    };
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadAllScripts);
-    } else {
-      // DOM already ready
-      loadAllScripts();
-    }
-  </script>
+  <script src="js/utils/helpers.js"></script>
+  <script src="js/layout/layout-manager.js"></script>
+  <script src="js/layout/widget-registry.js"></script>
+  <script src="js/widgets/base-widget.js"></script>
+  <script src="js/integrations/homeassistant.js"></script>
+  <script src="js/integrations/google-calendar.js"></script>
+  <script src="js/widgets/clock.js"></script>
+  <script src="js/widgets/weather.js"></script>
+  <script src="js/widgets/calendar.js"></script>
+  <script src="js/widgets/homeassistant.js"></script>
+  <script src="js/widgets/dadjoke.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
