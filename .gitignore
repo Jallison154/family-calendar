@@ -11,6 +11,9 @@ Thumbs.db
 # Local config (keep your API keys safe!)
 js/config.local.js
 
+# Server-side settings (contains API keys)
+settings.json
+
 # Logs
 *.log
 

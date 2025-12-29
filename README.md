@@ -64,7 +64,7 @@ A DAKboard-style smart home dashboard for always-on displays. Portrait 4K (9:16)
 
 ## Configuration
 
-All settings are managed via `control.html` and stored in browser localStorage.
+All settings are managed via `control.html` and stored server-side in `settings.json` (when using `server.py`) or in browser localStorage (when using a static file server).
 
 ### API Keys Needed
 
@@ -100,7 +100,10 @@ Dashboard will be available at `http://[vm-ip]`
 ### Local
 
 ```bash
-# Python
+# Python (with server-side settings)
+python3 server.py
+
+# Or simple static server (settings stored in browser only)
 python -m http.server 8000
 
 # Node

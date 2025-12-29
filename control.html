@@ -434,15 +434,32 @@ New Year, 2026-01-01"></textarea>
 
   <div class="toast" id="toast">Saved!</div>
 
+  <script src="js/api.js"></script>
   <script>
     const STORAGE_KEY = 'familyDashboardSettings';
     let calendarAccountCount = 0;
 
-    document.addEventListener('DOMContentLoaded', loadSettings);
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSettings();
+    });
 
-    function loadSettings() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const s = stored ? JSON.parse(stored) : {};
+    async function loadSettings() {
+      // Try to load from server first
+      let s = {};
+      if (typeof window.settingsAPI !== 'undefined') {
+        try {
+          s = await window.settingsAPI.fetch();
+        } catch (e) {
+          console.error('Failed to load from server, using localStorage fallback:', e);
+          // Fallback to localStorage
+          const stored = localStorage.getItem(STORAGE_KEY);
+          s = stored ? JSON.parse(stored) : {};
+        }
+      } else {
+        // Fallback to localStorage if API not available
+        const stored = localStorage.getItem(STORAGE_KEY);
+        s = stored ? JSON.parse(stored) : {};
+      }
 
       document.getElementById('greeting-name').value = s.display?.greetingName || '';
       document.getElementById('use-24hour').checked = s.display?.use24Hour || false;
@@ -471,7 +488,7 @@ New Year, 2026-01-01"></textarea>
       document.getElementById('countdowns').value = countdownsToText(s.countdowns || []);
     }
 
-    function saveSettings() {
+    async function saveSettings() {
       const settings = {
         display: {
           greetingName: document.getElementById('greeting-name').value,
@@ -515,30 +532,61 @@ New Year, 2026-01-01"></textarea>
         countdowns: textToCountdowns(document.getElementById('countdowns').value)
       };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      // Save to server
+      if (typeof window.settingsAPI !== 'undefined') {
+        const success = await window.settingsAPI.save(settings);
+        if (success) {
+          showToast('Settings saved to server! Dashboard will update.');
+          // Also update localStorage as backup
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        } else {
+          showToast('Failed to save to server. Saving locally as backup...');
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+      } else {
+        // Fallback to localStorage if API not available
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        showToast('Settings saved locally (server not available).');
+      }
+      
       localStorage.setItem('dashboardUpdate', Date.now().toString());
-
-      showToast('Settings saved! Dashboard will update.');
     }
 
-    function resetSettings() {
+    async function resetSettings() {
       if (confirm('Reset all settings?')) {
+        // Clear from server
+        if (typeof window.settingsAPI !== 'undefined') {
+          await window.settingsAPI.save({});
+        }
+        // Clear from localStorage
         localStorage.removeItem(STORAGE_KEY);
         localStorage.setItem('dashboardUpdate', Date.now().toString());
-        loadSettings();
+        await loadSettings();
         showToast('Reset complete.');
       }
     }
 
-    function exportSettings() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) {
+    async function exportSettings() {
+      // Try to get from server first, fallback to localStorage
+      let settings = {};
+      if (typeof window.settingsAPI !== 'undefined') {
+        settings = await window.settingsAPI.fetch();
+      }
+      
+      if (Object.keys(settings).length === 0) {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          settings = JSON.parse(stored);
+        }
+      }
+      
+      if (Object.keys(settings).length === 0) {
         showToast('No settings to export');
         return;
       }
 
       // Create a blob and download it
-      const blob = new Blob([stored], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -551,17 +599,17 @@ New Year, 2026-01-01"></textarea>
       showToast('Settings exported!');
     }
 
-    function importSettings() {
+    async function importSettings() {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'application/json';
       
-      input.onchange = (e) => {
+      input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           try {
             const imported = JSON.parse(event.target.result);
             
@@ -570,13 +618,31 @@ New Year, 2026-01-01"></textarea>
               throw new Error('Invalid settings file');
             }
             
-            // Save to localStorage
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
-            localStorage.setItem('dashboardUpdate', Date.now().toString());
+            // Remove metadata fields
+            delete imported._lastUpdated;
             
-            // Reload the form
-            loadSettings();
-            showToast('Settings imported! Click "Save & Apply" to use them.');
+            // Save to server
+            if (typeof window.settingsAPI !== 'undefined') {
+              const success = await window.settingsAPI.save(imported);
+              if (success) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+                localStorage.setItem('dashboardUpdate', Date.now().toString());
+                await loadSettings();
+                showToast('Settings imported to server!');
+              } else {
+                // Fallback to localStorage
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+                localStorage.setItem('dashboardUpdate', Date.now().toString());
+                await loadSettings();
+                showToast('Settings imported locally (server unavailable).');
+              }
+            } else {
+              // Fallback to localStorage
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+              localStorage.setItem('dashboardUpdate', Date.now().toString());
+              await loadSettings();
+              showToast('Settings imported locally (server not available).');
+            }
           } catch (error) {
             console.error('Import error:', error);
             showToast('Error importing settings. Please check the file format.');

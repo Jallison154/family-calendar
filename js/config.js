@@ -90,14 +90,29 @@ const CONFIG = {
   }
 };
 
-// Load from localStorage if available
+// Load from server (async, will be called on app init)
+async function loadConfigFromServer() {
+  if (typeof window !== 'undefined' && window.settingsAPI) {
+    try {
+      const serverConfig = await window.settingsAPI.fetch();
+      if (serverConfig && Object.keys(serverConfig).length > 0) {
+        Object.assign(CONFIG, serverConfig);
+        console.log('✓ Config loaded from server');
+      }
+    } catch (e) {
+      console.warn('Failed to load config from server:', e);
+    }
+  }
+}
+
+// Also try localStorage as fallback (for backward compatibility)
 if (typeof Storage !== 'undefined') {
-  // Check both keys - control panel uses 'familyDashboardSettings', legacy uses 'familyDashboardConfig'
   const stored = localStorage.getItem('familyDashboardSettings') || localStorage.getItem('familyDashboardConfig');
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
       Object.assign(CONFIG, parsed);
+      console.log('✓ Config loaded from localStorage (fallback)');
     } catch (e) {
       console.warn('Failed to parse stored config:', e);
     }

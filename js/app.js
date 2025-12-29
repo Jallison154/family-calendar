@@ -16,6 +16,13 @@ class DashboardApp {
   async init() {
     console.log('🚀 Initializing Family Calendar Dashboard...');
     
+    // Load config from server first
+    if (typeof window.loadConfigFromServer === 'function') {
+      await window.loadConfigFromServer();
+      // Refresh config reference
+      this.config = window.CONFIG || {};
+    }
+    
     // Initialize Unsplash Background Slideshow
     if (this.config.unsplash && window.UnsplashSlideshow) {
       this.unsplashSlideshow = new UnsplashSlideshow(this.config.unsplash);
@@ -42,13 +49,30 @@ class DashboardApp {
     // Check visitor mode
     this.checkVisitorMode();
     
-    // Listen for config changes
+    // Listen for config changes (localStorage fallback)
     window.addEventListener('storage', (e) => {
-      if (e.key === 'familyDashboardConfig' || e.key === 'familyDashboardSettings') {
+      if (e.key === 'familyDashboardConfig' || e.key === 'familyDashboardSettings' || e.key === 'dashboardUpdate') {
         console.log('🔄 Config changed, reloading...');
         location.reload();
       }
     });
+    
+    // Poll for server config changes every 30 seconds
+    setInterval(async () => {
+      if (typeof window.settingsAPI !== 'undefined') {
+        try {
+          const serverConfig = await window.settingsAPI.fetch();
+          const currentConfig = JSON.stringify(this.config);
+          const newConfig = JSON.stringify(serverConfig);
+          if (currentConfig !== newConfig && Object.keys(serverConfig).length > 0) {
+            console.log('🔄 Server config changed, reloading...');
+            location.reload();
+          }
+        } catch (e) {
+          // Silent fail - server might be temporarily unavailable
+        }
+      }
+    }, 30000);
     
     console.log('✅ Dashboard initialized');
   }
