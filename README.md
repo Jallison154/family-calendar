@@ -114,25 +114,41 @@ npx serve
 
 To install the server as a systemd service that auto-starts on boot:
 
+**Step 1: Find your project directory**
+
 ```bash
-# Navigate to the project directory
-cd /path/to/Family-Calendar
+# Option A: If you know where it is, navigate there
+cd /var/www/family-calendar  # or wherever you cloned it
+
+# Option B: Use the finder script to locate it
+# First, download/copy the find-project.sh script to your server, then:
+./deploy/find-project.sh
+```
+
+**Step 2: Run the setup script**
+
+```bash
+# Make sure you're in the project directory first
+cd /actual/path/to/Family-Calendar
 
 # Make script executable (if needed)
 chmod +x deploy/setup-server.sh
 
 # Run setup (requires sudo)
-# The script auto-detects the project directory
+# The script auto-detects the project directory from where it's located
 sudo ./deploy/setup-server.sh
 
 # Or specify a custom port
 sudo ./deploy/setup-server.sh 8080
 
-# Or specify both project directory and port
-sudo ./deploy/setup-server.sh /path/to/Family-Calendar 8080
+# Or specify both project directory and port (if running from elsewhere)
+sudo ./deploy/setup-server.sh /actual/path/to/Family-Calendar 8080
 ```
 
-**Note:** The script automatically detects the project directory based on where it's located. Just make sure you run it from anywhere within the project, or specify the full path as the first argument.
+**Common locations:**
+- `/var/www/family-calendar` (if using the full setup.sh)
+- `/home/username/Family-Calendar` (if cloned to home directory)
+- `/opt/family-calendar` (alternative location)
 
 This will:
 - Install Python 3 if needed
