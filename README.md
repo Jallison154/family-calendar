@@ -115,15 +115,24 @@ npx serve
 To install the server as a systemd service that auto-starts on boot:
 
 ```bash
+# Navigate to the project directory
+cd /path/to/Family-Calendar
+
 # Make script executable (if needed)
 chmod +x deploy/setup-server.sh
 
 # Run setup (requires sudo)
+# The script auto-detects the project directory
 sudo ./deploy/setup-server.sh
 
 # Or specify a custom port
 sudo ./deploy/setup-server.sh 8080
+
+# Or specify both project directory and port
+sudo ./deploy/setup-server.sh /path/to/Family-Calendar 8080
 ```
+
+**Note:** The script automatically detects the project directory based on where it's located. Just make sure you run it from anywhere within the project, or specify the full path as the first argument.
 
 This will:
 - Install Python 3 if needed

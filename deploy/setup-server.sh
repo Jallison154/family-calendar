@@ -13,6 +13,38 @@ echo "🚀 Family Calendar Dashboard Server Setup"
 echo "=========================================="
 echo ""
 
+# Allow custom project directory or port as arguments
+# Arguments can be: [project_dir] [port] or just [port]
+PORT=8000
+if [ -n "$1" ]; then
+    if [ -d "$1" ] && [ -f "$1/server.py" ]; then
+        # First argument is a directory
+        PROJECT_DIR="$1"
+        PORT=${2:-8000}
+    elif [[ "$1" =~ ^[0-9]+$ ]]; then
+        # First argument is a port number, use auto-detected directory
+        PORT="$1"
+    else
+        echo "❌ Invalid first argument: $1"
+        echo "   Expected: directory path or port number"
+        exit 1
+    fi
+fi
+
+echo "📁 Project directory: $PROJECT_DIR"
+echo "🔌 Port: $PORT"
+echo ""
+
+# Verify server.py exists
+if [ ! -f "$PROJECT_DIR/server.py" ]; then
+    echo "❌ server.py not found in $PROJECT_DIR"
+    echo "   Please either:"
+    echo "   1. Run this script from the project directory, or"
+    echo "   2. Specify the project directory as the first argument:"
+    echo "      sudo ./deploy/setup-server.sh /path/to/Family-Calendar [port]"
+    exit 1
+fi
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     echo "❌ Please run as root (use sudo)"
@@ -34,9 +66,6 @@ else
     echo "❌ server.py not found in $PROJECT_DIR"
     exit 1
 fi
-
-# Get the port (default 8000)
-PORT=${1:-8000}
 
 # Get the user who should run the service (try to detect current user or use www-data)
 if [ -n "$SUDO_USER" ]; then
@@ -120,6 +149,9 @@ if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo "🌐 Dashboard should be available at:"
     echo "   http://$IP:$PORT"
     echo "   http://$IP:$PORT/control.html"
+    echo ""
+    echo "📁 Settings file location:"
+    echo "   $PROJECT_DIR/settings.json"
     echo ""
 else
     echo "❌ Service is not running. Check logs with:"
