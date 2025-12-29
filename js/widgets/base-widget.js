@@ -58,6 +58,7 @@ class BaseWidget {
       <div class="widget-header">
         <span class="widget-icon">📦</span>
         <span class="widget-title">${this.type}</span>
+        <span class="widget-status-indicator" id="${this.id}-status"></span>
       </div>
       <div class="widget-body">
         ${this.getContent()}
@@ -149,6 +150,21 @@ class BaseWidget {
     if (layout.gridRow) {
       this.element.style.gridRow = layout.gridRow;
       this.config.gridRow = layout.gridRow;
+    }
+  }
+
+  /**
+   * Update status indicator
+   */
+  setStatus(status) {
+    const indicator = this.element?.querySelector(`#${this.id}-status`);
+    if (!indicator) return;
+    
+    indicator.className = 'widget-status-indicator';
+    if (status === 'connected') {
+      indicator.classList.add('connected');
+    } else if (status === 'updating') {
+      indicator.classList.add('updating');
     }
   }
 }

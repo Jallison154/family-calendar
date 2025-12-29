@@ -86,10 +86,12 @@ class HomeAssistantClient {
         }
       }
     } else if (message.type === 'result' && message.result) {
-      // Handle state subscription results
+      // Handle get_states response
       if (Array.isArray(message.result)) {
         message.result.forEach(state => {
           this.entityStates.set(state.entity_id, state);
+          // Notify listeners of initial state
+          this.notifyListeners(state.entity_id, state);
         });
       }
     }

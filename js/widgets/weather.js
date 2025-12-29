@@ -6,9 +6,13 @@ class WeatherWidget extends BaseWidget {
   constructor(config = {}) {
     super(config);
     this.type = 'weather';
-    this.weatherEntity = config.weatherEntity || 'weather.home';
+    // Get weatherEntity from global CONFIG, not widget config
+    this.weatherEntity = window.CONFIG?.weather?.weatherEntity || 'weather.home';
     this.haClient = null;
     this.currentData = null;
+    this.cacheKey = 'weatherWidgetCache';
+    this.cacheExpiryKey = 'weatherWidgetCacheExpiry';
+    this.cacheExpiryMs = 900000; // 15 minutes
   }
 
   getHTML() {
@@ -16,11 +20,52 @@ class WeatherWidget extends BaseWidget {
       <div class="widget-header">
         <span class="widget-icon">🌤️</span>
         <span class="widget-title">Weather</span>
+        <span class="widget-status-indicator" id="${this.id}-status"></span>
       </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="weather-loading">Loading weather...</div>
       </div>
     `;
+  }
+
+  loadCachedData() {
+    try {
+      const cached = localStorage.getItem(this.cacheKey);
+      const expiry = localStorage.getItem(this.cacheExpiryKey);
+      
+      if (cached && expiry && Date.now() < parseInt(expiry, 10)) {
+        const data = JSON.parse(cached);
+        // Parse forecast date strings back to Date objects
+        if (data.forecast) {
+          data.forecast = data.forecast.map(f => ({
+            ...f,
+            date: new Date(f.date)
+          }));
+        }
+        return data;
+      }
+    } catch (e) {
+      console.warn('Failed to load cached weather data:', e);
+    }
+    return null;
+  }
+
+  saveCachedData(data) {
+    try {
+      // Convert Date objects to ISO strings for storage
+      const dataToCache = {
+        ...data,
+        forecast: data.forecast ? data.forecast.map(f => ({
+          ...f,
+          date: f.date.toISOString()
+        })) : []
+      };
+      
+      localStorage.setItem(this.cacheKey, JSON.stringify(dataToCache));
+      localStorage.setItem(this.cacheExpiryKey, (Date.now() + this.cacheExpiryMs).toString());
+    } catch (e) {
+      console.warn('Failed to cache weather data:', e);
+    }
   }
 
   onInit() {
@@ -34,6 +79,15 @@ class WeatherWidget extends BaseWidget {
       });
     }
     
+    // Load cached data immediately
+    const cachedData = this.loadCachedData();
+    if (cachedData) {
+      this.currentData = cachedData;
+      this.render(cachedData);
+      this.setStatus('connected');
+    }
+    
+    // Update in background
     this.update();
     // Update every 10 minutes
     this.startAutoUpdate(600000);
@@ -41,17 +95,35 @@ class WeatherWidget extends BaseWidget {
 
   async update() {
     if (!this.haClient || !this.haClient.isConnected) {
-      this.showLoading();
+      // Only show loading if we don't have cached data
+      if (!this.currentData) {
+        this.showLoading();
+      }
       return;
     }
 
     const state = this.haClient.getState(this.weatherEntity);
     if (!state) {
-      this.showError('Weather entity not found');
+      // Only show error if we don't have cached data
+      if (!this.currentData) {
+        this.showError('Weather entity not found');
+      }
       return;
     }
 
-    await this.updateFromHA(state);
+    try {
+      this.setStatus('updating');
+      await this.updateFromHA(state);
+      this.setStatus('connected');
+    } catch (e) {
+      console.error('Weather update error:', e);
+      // If we have cached data, keep showing it
+      if (!this.currentData) {
+        this.showError('Failed to load weather');
+      } else {
+        this.setStatus('connected');
+      }
+    }
   }
 
   async updateFromHA(state) {
@@ -110,7 +182,7 @@ class WeatherWidget extends BaseWidget {
     const feelsLike = attrs.apparent_temperature || attrs.feels_like || attrs.feelslike || attrs.temperature;
     const unit = attrs.temperature_unit || '°F';
 
-    this.render({
+    const data = {
       temp: Math.round(attrs.temperature || 0),
       icon: currentIcon,
       iconUrl: currentIconUrl,
@@ -120,7 +192,10 @@ class WeatherWidget extends BaseWidget {
       unit,
       condition,
       forecast: processedForecast
-    });
+    };
+    
+    this.saveCachedData(data);
+    this.render(data);
   }
 
   render(data) {

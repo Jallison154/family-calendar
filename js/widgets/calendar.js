@@ -10,6 +10,9 @@ class CalendarWidget extends BaseWidget {
     this.events = [];
     this.today = new Date();
     this.today.setHours(0, 0, 0, 0);
+    this.cacheKey = 'calendarWidgetCache';
+    this.cacheExpiryKey = 'calendarWidgetCacheExpiry';
+    this.cacheExpiryMs = 3600000; // 1 hour
   }
 
   getHTML() {
@@ -17,11 +20,49 @@ class CalendarWidget extends BaseWidget {
       <div class="widget-header">
         <span class="widget-icon">📅</span>
         <span class="widget-title">Calendar</span>
+        <span class="widget-status-indicator" id="${this.id}-status"></span>
       </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="calendar-loading">Loading calendar...</div>
       </div>
     `;
+  }
+
+  loadCachedData() {
+    try {
+      const cached = localStorage.getItem(this.cacheKey);
+      const expiry = localStorage.getItem(this.cacheExpiryKey);
+      
+      if (cached && expiry && Date.now() < parseInt(expiry, 10)) {
+        this.events = JSON.parse(cached);
+        // Parse date strings back to Date objects
+        this.events = this.events.map(event => ({
+          ...event,
+          start: new Date(event.start),
+          end: new Date(event.end)
+        }));
+        return true;
+      }
+    } catch (e) {
+      console.warn('Failed to load cached calendar data:', e);
+    }
+    return false;
+  }
+
+  saveCachedData() {
+    try {
+      // Convert Date objects to ISO strings for storage
+      const eventsToCache = this.events.map(event => ({
+        ...event,
+        start: event.start.toISOString(),
+        end: event.end.toISOString()
+      }));
+      
+      localStorage.setItem(this.cacheKey, JSON.stringify(eventsToCache));
+      localStorage.setItem(this.cacheExpiryKey, (Date.now() + this.cacheExpiryMs).toString());
+    } catch (e) {
+      console.warn('Failed to cache calendar data:', e);
+    }
   }
 
   onInit() {
@@ -30,6 +71,13 @@ class CalendarWidget extends BaseWidget {
       this.calendarClient = window.app.calendarClient;
     }
     
+    // Load cached data immediately
+    if (this.loadCachedData()) {
+      this.render();
+      this.setStatus('connected');
+    }
+    
+    // Update in background
     this.update();
     // Update every 5 minutes
     this.startAutoUpdate(300000);
@@ -37,17 +85,27 @@ class CalendarWidget extends BaseWidget {
 
   async update() {
     if (!this.calendarClient) {
-      this.showLoading();
+      if (this.events.length === 0) {
+        this.showLoading();
+      }
       return;
     }
 
     try {
+      this.setStatus('updating');
       await this.calendarClient.fetchEvents();
       this.events = this.calendarClient.events || [];
+      this.saveCachedData();
       this.render();
+      this.setStatus('connected');
     } catch (e) {
       console.error('Calendar update error:', e);
-      this.showError('Failed to load calendar');
+      // Only show error if we don't have cached data
+      if (this.events.length === 0) {
+        this.showError('Failed to load calendar');
+      } else {
+        this.setStatus('connected'); // Still show as connected with cached data
+      }
     }
   }
 

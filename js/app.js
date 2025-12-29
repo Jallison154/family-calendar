@@ -10,10 +10,17 @@ class DashboardApp {
     this.calendarClient = null;
     this.widgets = [];
     this.visitorMode = false;
+    this.unsplashSlideshow = null;
   }
 
   async init() {
     console.log('🚀 Initializing Family Calendar Dashboard...');
+    
+    // Initialize Unsplash Background Slideshow
+    if (this.config.unsplash && window.UnsplashSlideshow) {
+      this.unsplashSlideshow = new UnsplashSlideshow(this.config.unsplash);
+      await this.unsplashSlideshow.init();
+    }
     
     // Initialize Home Assistant
     if (this.config.homeAssistant?.url && this.config.homeAssistant?.accessToken) {
@@ -37,7 +44,7 @@ class DashboardApp {
     
     // Listen for config changes
     window.addEventListener('storage', (e) => {
-      if (e.key === 'familyDashboardConfig') {
+      if (e.key === 'familyDashboardConfig' || e.key === 'familyDashboardSettings') {
         console.log('🔄 Config changed, reloading...');
         location.reload();
       }

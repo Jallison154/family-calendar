@@ -81,7 +81,8 @@ const CONFIG = {
 
 // Load from localStorage if available
 if (typeof Storage !== 'undefined') {
-  const stored = localStorage.getItem('familyDashboardConfig');
+  // Check both keys - control panel uses 'familyDashboardSettings', legacy uses 'familyDashboardConfig'
+  const stored = localStorage.getItem('familyDashboardSettings') || localStorage.getItem('familyDashboardConfig');
   if (stored) {
     try {
       const parsed = JSON.parse(stored);

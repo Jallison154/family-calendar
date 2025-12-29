@@ -144,6 +144,7 @@ body {
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--color-border);
+  position: relative;
 }
 
 .widget-title {
@@ -156,6 +157,39 @@ body {
 
 .widget-icon {
   font-size: 1.25rem;
+}
+
+.widget-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+  background: var(--color-text-muted);
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+  opacity: 0.5;
+}
+
+.widget-status-indicator.connected {
+  background: var(--color-success);
+  opacity: 1;
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+.widget-status-indicator.updating {
+  background: var(--color-accent);
+  opacity: 1;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px var(--color-accent);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 4px var(--color-accent);
+  }
 }
 
 .widget-body {

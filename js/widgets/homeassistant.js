@@ -7,7 +7,12 @@ class HomeAssistantWidget extends BaseWidget {
     super(config);
     this.type = 'homeassistant';
     this.haClient = null;
-    this.entities = config.entities || [];
+    // Get entities from global CONFIG, not widget config
+    this.entities = (window.CONFIG?.homeAssistant?.entities || []);
+    this.cacheKey = 'homeAssistantWidgetCache';
+    this.cacheExpiryKey = 'homeAssistantWidgetCacheExpiry';
+    this.cacheExpiryMs = 600000; // 10 minutes
+    this.cachedStates = new Map();
   }
 
   getHTML() {
@@ -15,6 +20,7 @@ class HomeAssistantWidget extends BaseWidget {
       <div class="widget-header">
         <span class="widget-icon">🏠</span>
         <span class="widget-title">Home</span>
+        <span class="widget-status-indicator" id="${this.id}-status"></span>
       </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="ha-loading">Loading...</div>
@@ -22,24 +28,33 @@ class HomeAssistantWidget extends BaseWidget {
     `;
   }
 
-  onInit() {
-    if (window.app && window.app.haClient) {
-      this.haClient = window.app.haClient;
-      this.haClient.onStateChange(() => {
-        this.update();
-      });
+  loadCachedData() {
+    try {
+      const cached = localStorage.getItem(this.cacheKey);
+      const expiry = localStorage.getItem(this.cacheExpiryKey);
+      
+      if (cached && expiry && Date.now() < parseInt(expiry, 10)) {
+        const states = JSON.parse(cached);
+        this.cachedStates = new Map(Object.entries(states));
+        return true;
+      }
+    } catch (e) {
+      console.warn('Failed to load cached Home Assistant data:', e);
     }
-    
-    this.update();
-    this.startAutoUpdate(30000);
+    return false;
   }
 
-  update() {
-    if (!this.haClient || !this.haClient.isConnected) {
-      this.showLoading();
-      return;
+  saveCachedData() {
+    try {
+      const statesObj = Object.fromEntries(this.cachedStates);
+      localStorage.setItem(this.cacheKey, JSON.stringify(statesObj));
+      localStorage.setItem(this.cacheExpiryKey, (Date.now() + this.cacheExpiryMs).toString());
+    } catch (e) {
+      console.warn('Failed to cache Home Assistant data:', e);
     }
+  }
 
+  renderEntities() {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
@@ -49,7 +64,9 @@ class HomeAssistantWidget extends BaseWidget {
     }
 
     const entitiesHTML = this.entities.map(entity => {
-      const state = this.haClient.getState(entity.entityId);
+      const state = this.cachedStates.get(entity.entityId) || 
+                   (this.haClient?.getState(entity.entityId));
+      
       if (!state) return '';
 
       const value = this.formatValue(state);
@@ -65,6 +82,53 @@ class HomeAssistantWidget extends BaseWidget {
     }).join('');
 
     body.innerHTML = `<div class="entity-grid">${entitiesHTML}</div>`;
+  }
+
+  onInit() {
+    if (window.app && window.app.haClient) {
+      this.haClient = window.app.haClient;
+      this.haClient.onStateChange((entityId, state) => {
+        if (state) {
+          this.cachedStates.set(entityId, state);
+          this.saveCachedData();
+        }
+        this.update();
+      });
+    }
+    
+    // Load cached data immediately
+    if (this.loadCachedData()) {
+      this.renderEntities();
+      this.setStatus('connected');
+    }
+    
+    this.update();
+    this.startAutoUpdate(30000);
+  }
+
+  update() {
+    if (!this.haClient || !this.haClient.isConnected) {
+      // Show cached data if available
+      if (this.cachedStates.size > 0) {
+        this.renderEntities();
+        this.setStatus('connected');
+      } else {
+        this.showLoading();
+      }
+      return;
+    }
+
+    // Update cached states from client
+    this.entities.forEach(entity => {
+      const state = this.haClient.getState(entity.entityId);
+      if (state) {
+        this.cachedStates.set(entity.entityId, state);
+      }
+    });
+    
+    this.saveCachedData();
+    this.renderEntities();
+    this.setStatus('connected');
   }
 
   formatValue(state) {
