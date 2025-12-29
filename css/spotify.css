@@ -1,0 +1,129 @@
+/* ============================================
+   Spotify Widget Styles
+   ============================================ */
+
+.widget-spotify {
+  grid-column: span 4;
+  grid-row: span 3;
+  display: none; /* Hidden by default, shown when playing */
+}
+
+.widget-spotify[style*="display: flex"] {
+  display: flex !important;
+}
+
+.spotify-now-playing {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 100%;
+  width: 100%;
+}
+
+.spotify-artwork {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.spotify-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spotify-artwork-placeholder {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spotify-artwork-placeholder .spotify-icon {
+  font-size: 3rem;
+}
+
+.spotify-playback-indicator {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.spotify-playback-indicator.paused {
+  opacity: 0.7;
+}
+
+.spotify-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.spotify-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.spotify-artist {
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spotify-album {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spotify-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+}
+
+/* Animation for now playing indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.spotify-playback-indicator:not(.paused) {
+  animation: pulse 2s ease-in-out infinite;
+}
+

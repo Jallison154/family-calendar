@@ -35,6 +35,11 @@ const CONFIG = {
     weatherEntity: 'weather.home'
   },
 
+  // Spotify (from Home Assistant)
+  spotify: {
+    mediaPlayerEntity: 'media_player.spotify'
+  },
+
   // Display Settings
   display: {
     use24Hour: false,
@@ -52,9 +57,15 @@ const CONFIG = {
         gridRow: '1 / 4'
       },
       {
+        id: 'spotify',
+        type: 'spotify',
+        gridColumn: '5 / 9',
+        gridRow: '1 / 4'
+      },
+      {
         id: 'weather',
         type: 'weather',
-        gridColumn: '5 / 9',
+        gridColumn: '9 / 13',
         gridRow: '1 / 4'
       },
       {

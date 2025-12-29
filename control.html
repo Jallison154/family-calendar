@@ -427,6 +427,8 @@ New Year, 2026-01-01"></textarea>
 
   <div class="actions">
     <button class="btn btn-secondary" onclick="resetSettings()">Reset</button>
+    <button class="btn btn-secondary" onclick="exportSettings()">📤 Export Settings</button>
+    <button class="btn btn-secondary" onclick="importSettings()">📥 Import Settings</button>
     <button class="btn btn-primary" onclick="saveSettings()">💾 Save & Apply</button>
   </div>
 
@@ -526,6 +528,65 @@ New Year, 2026-01-01"></textarea>
         loadSettings();
         showToast('Reset complete.');
       }
+    }
+
+    function exportSettings() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) {
+        showToast('No settings to export');
+        return;
+      }
+
+      // Create a blob and download it
+      const blob = new Blob([stored], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dashboard-settings-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showToast('Settings exported!');
+    }
+
+    function importSettings() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            
+            // Validate it looks like settings
+            if (typeof imported !== 'object') {
+              throw new Error('Invalid settings file');
+            }
+            
+            // Save to localStorage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+            localStorage.setItem('dashboardUpdate', Date.now().toString());
+            
+            // Reload the form
+            loadSettings();
+            showToast('Settings imported! Click "Save & Apply" to use them.');
+          } catch (error) {
+            console.error('Import error:', error);
+            showToast('Error importing settings. Please check the file format.');
+          }
+        };
+        
+        reader.readAsText(file);
+      };
+      
+      input.click();
     }
 
     function showToast(msg) {

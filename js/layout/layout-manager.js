@@ -65,9 +65,15 @@ class LayoutManager {
           gridRow: '1 / 4'
         },
         {
+          id: 'spotify',
+          type: 'spotify',
+          gridColumn: '5 / 9',
+          gridRow: '1 / 4'
+        },
+        {
           id: 'weather',
           type: 'weather',
-          gridColumn: '5 / 9',
+          gridColumn: '9 / 13',
           gridRow: '1 / 4'
         },
         {
