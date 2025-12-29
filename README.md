@@ -112,7 +112,20 @@ npx serve
 
 ### Auto-Start Server (Linux)
 
-To install the server as a systemd service that auto-starts on boot:
+**Recommended: Fresh Install Script** (removes old installation and sets up clean)
+
+```bash
+# Navigate to the project directory
+cd /var/www/family-calendar  # or wherever your project is
+
+# Run the fresh install script (requires sudo)
+sudo ./deploy/fresh-install.sh
+
+# Or specify a custom port
+sudo ./deploy/fresh-install.sh 8080
+```
+
+**Alternative: Standard Setup** (if you prefer the regular setup script)
 
 **Step 1: Find your project directory**
 
