@@ -599,27 +599,47 @@ New Year, 2026-01-01"></textarea>
       showToast('Settings exported!');
     }
 
-    async function importSettings() {
+    function importSettings() {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'application/json';
       
       input.onchange = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+          console.log('No file selected');
+          return;
+        }
 
+        console.log('File selected:', file.name);
         const reader = new FileReader();
+        
+        reader.onerror = (error) => {
+          console.error('File read error:', error);
+          showToast('Error reading file. Please try again.');
+        };
+        
         reader.onload = async (event) => {
           try {
+            console.log('File read, parsing JSON...');
             const imported = JSON.parse(event.target.result);
             
             // Validate it looks like settings
-            if (typeof imported !== 'object') {
-              throw new Error('Invalid settings file');
+            if (typeof imported !== 'object' || imported === null || Array.isArray(imported)) {
+              throw new Error('Invalid settings file - must be a JSON object (not an array)');
+            }
+            
+            // Make sure it has at least some recognizable keys
+            const validKeys = ['display', 'unsplash', 'googleCalendar', 'homeAssistant', 'weather', 'dadJoke', 'countdowns'];
+            const hasValidKeys = validKeys.some(key => key in imported);
+            if (!hasValidKeys && Object.keys(imported).length > 0) {
+              console.warn('Settings file may not be in the correct format, but attempting to import anyway');
             }
             
             // Remove metadata fields
             delete imported._lastUpdated;
+            
+            console.log('Settings parsed, saving...');
             
             // Save to server
             if (typeof window.settingsAPI !== 'undefined') {
@@ -630,6 +650,7 @@ New Year, 2026-01-01"></textarea>
                 await loadSettings();
                 showToast('Settings imported to server!');
               } else {
+                console.warn('Server save failed, saving to localStorage');
                 // Fallback to localStorage
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
                 localStorage.setItem('dashboardUpdate', Date.now().toString());
@@ -637,6 +658,7 @@ New Year, 2026-01-01"></textarea>
                 showToast('Settings imported locally (server unavailable).');
               }
             } else {
+              console.log('settingsAPI not available, saving to localStorage');
               // Fallback to localStorage
               localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
               localStorage.setItem('dashboardUpdate', Date.now().toString());
@@ -645,7 +667,7 @@ New Year, 2026-01-01"></textarea>
             }
           } catch (error) {
             console.error('Import error:', error);
-            showToast('Error importing settings. Please check the file format.');
+            showToast(`Error importing settings: ${error.message}`);
           }
         };
         
