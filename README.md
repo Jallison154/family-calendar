@@ -110,6 +110,42 @@ python -m http.server 8000
 npx serve
 ```
 
+### Auto-Start Server (Linux)
+
+To install the server as a systemd service that auto-starts on boot:
+
+```bash
+# Make script executable (if needed)
+chmod +x deploy/setup-server.sh
+
+# Run setup (requires sudo)
+sudo ./deploy/setup-server.sh
+
+# Or specify a custom port
+sudo ./deploy/setup-server.sh 8080
+```
+
+This will:
+- Install Python 3 if needed
+- Create a systemd service
+- Start the server automatically
+- Enable it to start on system boot
+
+**Useful commands:**
+```bash
+# View logs
+sudo journalctl -u family-calendar -f
+
+# Restart server
+sudo systemctl restart family-calendar
+
+# Stop server
+sudo systemctl stop family-calendar
+
+# Check status
+sudo systemctl status family-calendar
+```
+
 ### Kiosk Mode (Raspberry Pi)
 
 ```bash
