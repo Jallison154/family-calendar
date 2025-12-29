@@ -12,10 +12,6 @@ class ClockWidget extends BaseWidget {
 
   getHTML() {
     return `
-      <div class="widget-header">
-        <span class="widget-icon">🕐</span>
-        <span class="widget-title">Time</span>
-      </div>
       <div class="widget-body">
         <div class="clock-display" id="${this.id}-time">12:00</div>
         <div class="clock-date" id="${this.id}-date">Loading...</div>

@@ -12,10 +12,6 @@ class DadJokeWidget extends BaseWidget {
 
   getHTML() {
     return `
-      <div class="widget-header">
-        <span class="widget-icon">😄</span>
-        <span class="widget-title">Dad Joke</span>
-      </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="joke-loading">Loading joke...</div>
       </div>

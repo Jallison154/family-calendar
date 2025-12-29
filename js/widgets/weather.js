@@ -17,11 +17,6 @@ class WeatherWidget extends BaseWidget {
 
   getHTML() {
     return `
-      <div class="widget-header">
-        <span class="widget-icon">🌤️</span>
-        <span class="widget-title">Weather</span>
-        <span class="widget-status-indicator" id="${this.id}-status"></span>
-      </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="weather-loading">Loading weather...</div>
       </div>

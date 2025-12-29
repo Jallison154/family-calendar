@@ -55,11 +55,6 @@ class BaseWidget {
    */
   getHTML() {
     return `
-      <div class="widget-header">
-        <span class="widget-icon">📦</span>
-        <span class="widget-title">${this.type}</span>
-        <span class="widget-status-indicator" id="${this.id}-status"></span>
-      </div>
       <div class="widget-body">
         ${this.getContent()}
       </div>

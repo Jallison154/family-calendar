@@ -17,11 +17,6 @@ class HomeAssistantWidget extends BaseWidget {
 
   getHTML() {
     return `
-      <div class="widget-header">
-        <span class="widget-icon">🏠</span>
-        <span class="widget-title">Home</span>
-        <span class="widget-status-indicator" id="${this.id}-status"></span>
-      </div>
       <div class="widget-body" id="${this.id}-body">
         <div class="ha-loading">Loading...</div>
       </div>

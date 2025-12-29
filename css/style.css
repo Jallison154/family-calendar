@@ -138,13 +138,7 @@ body {
 }
 
 .widget-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  position: relative;
+  display: none;
 }
 
 .widget-title {
@@ -197,6 +191,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 0;
 }
 
 /* ============================================
