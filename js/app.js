@@ -11,6 +11,7 @@ class DashboardApp {
     this.widgets = [];
     this.visitorMode = false;
     this.unsplashSlideshow = null;
+    this.lastServerConfigHash = null; // Store hash of last server config for comparison
   }
 
   async init() {
@@ -59,15 +60,30 @@ class DashboardApp {
     });
     
     // Poll for server config changes every 30 seconds
+    // Store initial server config hash
+    if (typeof window.settingsAPI !== 'undefined') {
+      try {
+        const initialConfig = await window.settingsAPI.fetch();
+        if (initialConfig && Object.keys(initialConfig).length > 0) {
+          this.lastServerConfigHash = JSON.stringify(initialConfig);
+        }
+      } catch (e) {
+        // Ignore initial fetch error
+      }
+    }
+    
     setInterval(async () => {
       if (typeof window.settingsAPI !== 'undefined') {
         try {
           const serverConfig = await window.settingsAPI.fetch();
-          const currentConfig = JSON.stringify(this.config);
-          const newConfig = JSON.stringify(serverConfig);
-          if (currentConfig !== newConfig && Object.keys(serverConfig).length > 0) {
-            console.log('🔄 Server config changed, reloading...');
-            location.reload();
+          if (serverConfig && Object.keys(serverConfig).length > 0) {
+            const newConfigHash = JSON.stringify(serverConfig);
+            // Only reload if the server config actually changed
+            if (this.lastServerConfigHash !== null && this.lastServerConfigHash !== newConfigHash) {
+              console.log('🔄 Server config changed, reloading...');
+              location.reload();
+            }
+            this.lastServerConfigHash = newConfigHash;
           }
         } catch (e) {
           // Silent fail - server might be temporarily unavailable
