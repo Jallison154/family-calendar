@@ -67,11 +67,11 @@
 }
 
 .widget-weather .weather-icon {
-  font-size: 2.5rem;
+  font-size: 5rem;
 }
 
 .widget-weather .weather-temp {
-  font-size: 2.5rem;
+  font-size: 5rem;
   font-weight: 200;
   line-height: 1;
 }
@@ -80,7 +80,7 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 0.75rem;
-  font-size: 0.875rem;
+  font-size: 1.75rem;
 }
 
 .weather-detail {
@@ -89,12 +89,12 @@
 }
 
 .weather-detail-value {
-  font-size: 1rem;
+  font-size: 2rem;
   font-weight: 500;
 }
 
 .weather-detail-label {
-  font-size: 0.7rem;
+  font-size: 1.4rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -116,7 +116,7 @@
 }
 
 .forecast-day-name {
-  font-size: 0.7rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -124,24 +124,24 @@
 }
 
 .forecast-icon {
-  font-size: 1.25rem;
+  font-size: 2.5rem;
   margin: 0.25rem 0;
 }
 
 .forecast-high {
-  font-size: 0.875rem;
+  font-size: 1.75rem;
   font-weight: 500;
 }
 
 .forecast-low {
-  font-size: 0.75rem;
+  font-size: 1.5rem;
   color: var(--color-text-muted);
 }
 
 /* Calendar Widget */
 .widget-calendar {
   grid-column: span 12;
-  grid-row: span 6;
+  grid-row: span 8;
 }
 
 .calendar-grid {
