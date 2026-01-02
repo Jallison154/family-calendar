@@ -174,27 +174,52 @@ class CalendarWidget extends BaseWidget {
   groupEventsByDate() {
     const grouped = new Map();
     
+    if (!this.events || this.events.length === 0) {
+      console.warn('⚠️ No events to group');
+      return grouped;
+    }
+    
+    console.log(`📅 Grouping ${this.events.length} events by date`);
+    
     for (const event of this.events) {
-      let startDay = new Date(event.start);
-      startDay.setHours(0, 0, 0, 0);
-      
-      let endDay = new Date(event.end);
-      if (event.isAllDay) {
-        endDay.setDate(endDay.getDate() - 1);
+      if (!event.start || !event.end) {
+        console.warn('⚠️ Event missing start/end in grouping:', event);
+        continue;
       }
-      endDay.setHours(0, 0, 0, 0);
       
-      const currentDay = new Date(startDay);
-      while (currentDay <= endDay) {
-        const key = this.dateKey(currentDay);
-        if (!grouped.has(key)) {
-          grouped.set(key, []);
+      try {
+        let startDay = new Date(event.start);
+        if (isNaN(startDay.getTime())) {
+          console.warn('⚠️ Invalid start date:', event.start, event);
+          continue;
         }
-        grouped.get(key).push(event);
-        currentDay.setDate(currentDay.getDate() + 1);
+        startDay.setHours(0, 0, 0, 0);
+        
+        let endDay = new Date(event.end);
+        if (isNaN(endDay.getTime())) {
+          console.warn('⚠️ Invalid end date:', event.end, event);
+          continue;
+        }
+        if (event.isAllDay) {
+          endDay.setDate(endDay.getDate() - 1);
+        }
+        endDay.setHours(0, 0, 0, 0);
+        
+        const currentDay = new Date(startDay);
+        while (currentDay <= endDay) {
+          const key = this.dateKey(currentDay);
+          if (!grouped.has(key)) {
+            grouped.set(key, []);
+          }
+          grouped.get(key).push(event);
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+      } catch (e) {
+        console.error('⚠️ Error grouping event:', e, event);
       }
     }
     
+    console.log(`📅 Grouped events into ${grouped.size} days`);
     return grouped;
   }
 

@@ -15,9 +15,12 @@ class GoogleCalendarClient {
   }
 
   async fetchEvents() {
+    // Use a wider date range to ensure we get all events
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const end = new Date(now.getTime() + (this.config.weeksAhead + 1) * 7 * 86400000);
+    // Get events from 30 days ago to 60 days ahead (very wide range)
+    const startRange = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const endRange = new Date(now.getTime() + (this.config.weeksAhead + 8) * 7 * 86400000);
     
     const allEvents = [];
     
@@ -25,13 +28,15 @@ class GoogleCalendarClient {
       if (!feed.url || !feed.url.trim()) continue;
       
       try {
-        const events = await this.fetchIcsFeed(feed, now, end);
+        const events = await this.fetchIcsFeed(feed, startRange, endRange);
+        console.log(`📅 Fetched ${events.length} events from ${feed.name || 'Unnamed'}`);
         allEvents.push(...events);
       } catch (e) {
         console.error(`ICS feed error (${feed.name}):`, e);
       }
     }
     
+    console.log(`📅 Total events loaded: ${allEvents.length}`);
     this.events = allEvents;
   }
 
@@ -88,6 +93,16 @@ class GoogleCalendarClient {
       const events = this.parseIcs(icsText, feed, startRange, endRange);
       console.log(`📅 Parsed ${events.length} events from ${feed.name || 'Unnamed'}`);
       
+      // Log event details for debugging (first 3 events)
+      if (events.length > 0) {
+        console.log('📅 Sample events:', events.slice(0, 3).map(e => ({
+          title: e.title || 'Untitled',
+          start: e.start?.toISOString(),
+          end: e.end?.toISOString(),
+          isAllDay: e.isAllDay
+        })));
+      }
+      
       return events;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -125,7 +140,14 @@ class GoogleCalendarClient {
       if (line.startsWith('BEGIN:VEVENT')) {
         currentEvent = { color: feed.color || '#3b82f6' };
       } else if (line.startsWith('END:VEVENT')) {
-        if (currentEvent && currentEvent.start && currentEvent.end) {
+        if (currentEvent) {
+          // Ensure we have start and end dates
+          if (!currentEvent.start || !currentEvent.end) {
+            console.warn('⚠️ Event missing start/end dates, skipping:', currentEvent.title || 'Untitled');
+            currentEvent = null;
+            continuationLine = '';
+            continue;
+          }
           let start = new Date(currentEvent.start);
           let end = new Date(currentEvent.end);
           
@@ -177,6 +199,9 @@ class GoogleCalendarClient {
           // Include ALL events with valid dates - maximum permissiveness
           // The calendar widget will handle what to display based on its date range
           events.push(currentEvent);
+          if (!currentEvent.title) {
+            console.warn('⚠️ Event has no title:', currentEvent);
+          }
         }
         currentEvent = null;
         continuationLine = '';
