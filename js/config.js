@@ -72,14 +72,14 @@ const CONFIG = {
       {
         id: 'todays-events',
         type: 'todays-events',
-        gridColumn: '1 / 7',
-        gridRow: '3 / 7'
+        gridColumn: '1 / 13',
+        gridRow: '3 / 5'
       },
       {
         id: 'calendar',
         type: 'calendar',
-        gridColumn: '7 / 13',
-        gridRow: '3 / 11'
+        gridColumn: '1 / 13',
+        gridRow: '5 / 11'
       },
       {
         id: 'homeassistant',
