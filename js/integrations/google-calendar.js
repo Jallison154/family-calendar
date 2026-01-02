@@ -141,12 +141,37 @@ class GoogleCalendarClient {
         currentEvent = { color: feed.color || '#3b82f6' };
       } else if (line.startsWith('END:VEVENT')) {
         if (currentEvent) {
-          // Ensure we have start and end dates
+          // Handle missing dates - try to salvage events with titles
           if (!currentEvent.start || !currentEvent.end) {
-            console.warn('⚠️ Event missing start/end dates, skipping:', currentEvent.title || 'Untitled');
-            currentEvent = null;
-            continuationLine = '';
-            continue;
+            console.warn('⚠️ Event missing start/end dates:', currentEvent.title || 'Untitled', {
+              hasStart: !!currentEvent.start,
+              hasEnd: !!currentEvent.end,
+              dtstartValue: currentEvent._dtstartValue,
+              dtendValue: currentEvent._dtendValue,
+              allProps: Object.keys(currentEvent)
+            });
+            
+            // Try to salvage events with titles by using fallback dates
+            if (currentEvent.title) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              
+              if (!currentEvent.start) {
+                currentEvent.start = new Date(today);
+              }
+              if (!currentEvent.end) {
+                currentEvent.end = new Date(currentEvent.start);
+                currentEvent.end.setDate(currentEvent.end.getDate() + 1);
+              }
+              currentEvent.isAllDay = true;
+              console.log('📅 Using fallback dates for event:', currentEvent.title, 'start:', currentEvent.start.toISOString(), 'end:', currentEvent.end.toISOString());
+            } else {
+              // Skip events without start/end dates AND no title
+              console.warn('⚠️ Skipping event with no title and no dates');
+              currentEvent = null;
+              continuationLine = '';
+              continue;
+            }
           }
           let start = new Date(currentEvent.start);
           let end = new Date(currentEvent.end);
@@ -217,9 +242,16 @@ class GoogleCalendarClient {
         currentEvent = null;
         continuationLine = '';
       } else if (currentEvent) {
-        const [key, ...valueParts] = line.split(':');
-        const value = valueParts.join(':');
-        this.processIcsLine(currentEvent, key, value);
+        // Handle property line (KEY:VALUE or KEY;PARAMS:VALUE)
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+          const key = line.substring(0, colonIndex);
+          const value = line.substring(colonIndex + 1);
+          this.processIcsLine(currentEvent, key, value);
+        } else {
+          // Line doesn't have a colon, might be malformed - skip it
+          console.warn('⚠️ Skipping malformed ICS line (no colon):', line.substring(0, 50));
+        }
       }
     }
     
