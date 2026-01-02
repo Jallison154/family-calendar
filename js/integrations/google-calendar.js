@@ -47,21 +47,70 @@ class GoogleCalendarClient {
       }
     }
     
-    const proxyUrl = this.config.corsProxy + encodeURIComponent(url);
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
-    const icsText = await response.text();
-    return this.parseIcs(icsText, feed, startRange, endRange);
+    try {
+      const proxyUrl = this.config.corsProxy + encodeURIComponent(url);
+      console.log(`📅 Fetching ICS feed: ${feed.name || 'Unnamed'}`);
+      
+      const response = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'text/calendar, text/plain, */*'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const icsText = await response.text();
+      console.log(`📅 Received ICS data (${icsText.length} bytes) for ${feed.name || 'Unnamed'}`);
+      
+      if (!icsText || icsText.trim().length === 0) {
+        throw new Error('ICS feed returned empty response');
+      }
+      
+      const events = this.parseIcs(icsText, feed, startRange, endRange);
+      console.log(`📅 Parsed ${events.length} events from ${feed.name || 'Unnamed'}`);
+      
+      return events;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout: Calendar feed took too long to load (>30s)`);
+      }
+      throw error;
+    }
   }
 
   parseIcs(icsText, feed, startRange, endRange) {
     const events = [];
     const lines = icsText.split(/\r?\n/);
     let currentEvent = null;
+    let continuationLine = '';
     
+    // Parse ICS with support for line continuation (lines starting with space)
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      let line = lines[i];
+      
+      // Handle line continuation (RFC 5545)
+      if (line.startsWith(' ') || line.startsWith('\t')) {
+        if (currentEvent) {
+          continuationLine += line.substring(1);
+          continue;
+        }
+      } else if (continuationLine) {
+        // Process the accumulated continuation
+        const [key, ...valueParts] = continuationLine.split(':');
+        const value = valueParts.join(':');
+        this.processIcsLine(currentEvent, key, value);
+        continuationLine = '';
+      }
       
       if (line.startsWith('BEGIN:VEVENT')) {
         currentEvent = { color: feed.color || '#3b82f6' };
@@ -70,56 +119,94 @@ class GoogleCalendarClient {
           const start = new Date(currentEvent.start);
           const end = new Date(currentEvent.end);
           
+          // Only include events that overlap with our date range
           if (end >= startRange && start <= endRange) {
             events.push(currentEvent);
           }
         }
         currentEvent = null;
+        continuationLine = '';
       } else if (currentEvent) {
         const [key, ...valueParts] = line.split(':');
         const value = valueParts.join(':');
-        
-        if (key.startsWith('DTSTART')) {
-          currentEvent.start = this.parseIcsDate(value);
-          currentEvent.isAllDay = !key.includes('T');
-        } else if (key.startsWith('DTEND')) {
-          currentEvent.end = this.parseIcsDate(value);
-        } else if (key === 'SUMMARY') {
-          currentEvent.title = value.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
-        } else if (key === 'DESCRIPTION') {
-          currentEvent.description = value.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
-        } else if (key === 'LOCATION') {
-          currentEvent.location = value;
-        }
+        this.processIcsLine(currentEvent, key, value);
       }
     }
     
     return events;
   }
+  
+  processIcsLine(currentEvent, key, value) {
+    if (!currentEvent || !key) return;
+    
+    // Handle parameters (e.g., DTSTART;VALUE=DATE:20250721)
+    const [baseKey, ...params] = key.split(';');
+    const paramMap = {};
+    params.forEach(param => {
+      const [pKey, pValue] = param.split('=');
+      if (pKey && pValue) paramMap[pKey] = pValue;
+    });
+    
+    if (baseKey.startsWith('DTSTART')) {
+      currentEvent.start = this.parseIcsDate(value, paramMap);
+      currentEvent.isAllDay = !baseKey.includes('T') || paramMap.VALUE === 'DATE';
+    } else if (baseKey.startsWith('DTEND')) {
+      currentEvent.end = this.parseIcsDate(value, paramMap);
+    } else if (baseKey === 'SUMMARY') {
+      currentEvent.title = this.unescapeIcsText(value);
+    } else if (baseKey === 'DESCRIPTION') {
+      currentEvent.description = this.unescapeIcsText(value);
+    } else if (baseKey === 'LOCATION') {
+      currentEvent.location = this.unescapeIcsText(value);
+    }
+  }
+  
+  unescapeIcsText(text) {
+    if (!text) return '';
+    return text
+      .replace(/\\,/g, ',')
+      .replace(/\\;/g, ';')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\n/g, '\n');
+  }
 
-  parseIcsDate(dateStr) {
-    if (dateStr.length === 8) {
+  parseIcsDate(dateStr, params = {}) {
+    if (!dateStr) return new Date();
+    
+    // Handle DATE value type (all-day events)
+    if (params.VALUE === 'DATE' || dateStr.length === 8) {
       // All-day: YYYYMMDD
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6)) - 1;
-      const day = parseInt(dateStr.substring(6, 8));
-      return new Date(year, month, day);
+      const year = parseInt(dateStr.substring(0, 4), 10);
+      const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+      const day = parseInt(dateStr.substring(6, 8), 10);
+      return new Date(Date.UTC(year, month, day));
     } else if (dateStr.includes('T')) {
-      // DateTime
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6)) - 1;
-      const day = parseInt(dateStr.substring(6, 8));
-      const hour = parseInt(dateStr.substring(9, 11)) || 0;
-      const minute = parseInt(dateStr.substring(11, 13)) || 0;
+      // DateTime: YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ
+      const year = parseInt(dateStr.substring(0, 4), 10);
+      const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+      const day = parseInt(dateStr.substring(6, 8), 10);
+      const hour = parseInt(dateStr.substring(9, 11), 10) || 0;
+      const minute = parseInt(dateStr.substring(11, 13), 10) || 0;
+      const second = parseInt(dateStr.substring(13, 15), 10) || 0;
       
-      if (dateStr.endsWith('Z')) {
-        return new Date(Date.UTC(year, month, day, hour, minute));
+      if (dateStr.endsWith('Z') || dateStr.length >= 16 && dateStr[15] === 'Z') {
+        // UTC time
+        return new Date(Date.UTC(year, month, day, hour, minute, second));
       } else {
-        return new Date(year, month, day, hour, minute);
+        // Local time (or timezone specified in TZID param - simplified for now)
+        return new Date(year, month, day, hour, minute, second);
       }
     }
     
-    return new Date(dateStr);
+    // Fallback: try to parse as ISO string
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    
+    // Last resort: return current date
+    console.warn(`Failed to parse ICS date: ${dateStr}`);
+    return new Date();
   }
 }
 
@@ -127,5 +214,6 @@ class GoogleCalendarClient {
 if (typeof window !== 'undefined') {
   window.GoogleCalendarClient = GoogleCalendarClient;
 }
+
 
 

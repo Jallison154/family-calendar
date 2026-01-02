@@ -88,18 +88,35 @@ class CalendarWidget extends BaseWidget {
 
     try {
       this.setStatus('updating');
-      await this.calendarClient.fetchEvents();
+      
+      // Set a timeout for the entire fetch operation
+      const fetchPromise = this.calendarClient.fetchEvents();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Calendar fetch timeout (>35s)')), 35000);
+      });
+      
+      await Promise.race([fetchPromise, timeoutPromise]);
+      
       this.events = this.calendarClient.events || [];
       this.saveCachedData();
       this.render();
       this.setStatus('connected');
     } catch (e) {
       console.error('Calendar update error:', e);
+      const errorMessage = e.message || 'Failed to load calendar';
+      
       // Only show error if we don't have cached data
       if (this.events.length === 0) {
-        this.showError('Failed to load calendar');
+        if (errorMessage.includes('timeout') || errorMessage.includes('took too long')) {
+          this.showError('Calendar is taking too long to load. Check your connection or try again later.');
+        } else {
+          this.showError(`Failed to load calendar: ${errorMessage}`);
+        }
+        this.setStatus('error');
       } else {
-        this.setStatus('connected'); // Still show as connected with cached data
+        // Show warning but keep using cached data
+        this.setStatus('connected');
+        console.warn('Using cached calendar data due to fetch error');
       }
     }
   }
