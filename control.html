@@ -684,16 +684,13 @@ New Year, 2026-01-01"></textarea>
       browserEl.style.display = 'none';
 
       try {
-        const baseUrl = url.replace(/\/$/, '');
-        const response = await fetch(`${baseUrl}/api/states`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        // Use server-side proxy to avoid CORS issues
+        const proxyUrl = `/api/homeassistant?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}&endpoint=${encodeURIComponent('/api/states')}`;
+        const response = await fetch(proxyUrl);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
         }
 
         const entities = await response.json();

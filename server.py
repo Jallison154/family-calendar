@@ -33,6 +33,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.proxy_calendar()
             return
         
+        # API endpoint for proxying Home Assistant API requests
+        if parsed_path.path == '/api/homeassistant':
+            self.proxy_homeassistant()
+            return
+        
         # API endpoint for getting server version
         if parsed_path.path == '/api/version':
             self.send_version()
@@ -216,6 +221,71 @@ class DashboardHandler(BaseHTTPRequestHandler):
             print(f"Error getting version: {e}")
             self.send_response(500)
             self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
+    
+    def proxy_homeassistant(self):
+        """Proxy Home Assistant API requests (avoid CORS issues)"""
+        try:
+            parsed_path = urlparse(self.path)
+            query_params = parse_qs(parsed_path.query)
+            
+            # Get URL and token from query parameters
+            url = query_params.get('url', [None])[0]
+            token = query_params.get('token', [None])[0]
+            endpoint = query_params.get('endpoint', ['/api/states'])[0]
+            
+            if not url or not token:
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Missing 'url' or 'token' parameter"}).encode())
+                return
+            
+            # Decode URL
+            url = unquote(url)
+            token = unquote(token)
+            endpoint = unquote(endpoint)
+            
+            # Construct full API URL
+            base_url = url.rstrip('/')
+            api_url = base_url + endpoint
+            
+            # Create request with authorization header
+            req = urllib.request.Request(api_url)
+            req.add_header('Authorization', f'Bearer {token}')
+            req.add_header('Content-Type', 'application/json')
+            
+            # Fetch with timeout
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    data = response.read()
+                    status_code = response.getcode()
+                    
+                    self.send_response(status_code)
+                    self.send_cors_headers()
+                    self.send_header('Content-Type', response.headers.get('Content-Type', 'application/json'))
+                    self.end_headers()
+                    self.wfile.write(data)
+            except urllib.error.HTTPError as e:
+                # Handle HTTP errors (like 401, 404, etc.)
+                error_body = e.read()
+                self.send_response(e.code)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(error_body)
+            except urllib.error.URLError as e:
+                self.send_response(500)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Failed to connect to Home Assistant: {str(e)}"}).encode())
+        except Exception as e:
+            print(f"Error proxying Home Assistant request: {e}")
+            self.send_response(500)
+            self.send_cors_headers()
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
     
