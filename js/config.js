@@ -60,7 +60,7 @@ const CONFIG = {
       {
         id: 'clock',
         type: 'clock',
-        gridColumn: '7 / 13',
+        gridColumn: '9 / 13',
         gridRow: '1 / 2'
       },
       {
@@ -72,26 +72,26 @@ const CONFIG = {
       {
         id: 'todays-events',
         type: 'todays-events',
-        gridColumn: '1 / 13',
-        gridRow: '3 / 6'
+        gridColumn: '1 / 7',
+        gridRow: '3 / 7'
       },
       {
         id: 'calendar',
         type: 'calendar',
-        gridColumn: '1 / 13',
-        gridRow: '6 / 10'
+        gridColumn: '7 / 13',
+        gridRow: '3 / 11'
       },
       {
         id: 'homeassistant',
         type: 'homeassistant',
         gridColumn: '1 / 7',
-        gridRow: '10 / 12'
+        gridRow: '11 / 12'
       },
       {
         id: 'dadjoke',
         type: 'dadjoke',
         gridColumn: '7 / 13',
-        gridRow: '10 / 12'
+        gridRow: '11 / 12'
       }
     ]
   }
