@@ -126,33 +126,57 @@ class GoogleCalendarClient {
         currentEvent = { color: feed.color || '#3b82f6' };
       } else if (line.startsWith('END:VEVENT')) {
         if (currentEvent && currentEvent.start && currentEvent.end) {
-          const start = new Date(currentEvent.start);
-          const end = new Date(currentEvent.end);
+          let start = new Date(currentEvent.start);
+          let end = new Date(currentEvent.end);
           
-          // Detect all-day events: if start and end are on the same calendar date (ignoring time)
+          // Detect all-day events more robustly
           // This handles cases where events are created "with no time" but exported with timestamps
-          // Also handle cases where start and end times are identical (same timestamp)
           if (!currentEvent.isAllDay) {
-            const startDate = new Date(start);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = new Date(end);
-            endDate.setHours(0, 0, 0, 0);
-            
-            // If start and end are the same date (or start/end times are identical), treat as all-day event
-            const timeDiff = Math.abs(end.getTime() - start.getTime());
-            if (startDate.getTime() === endDate.getTime() || timeDiff < 1000) {
+            // Check if both DTSTART and DTEND use VALUE=DATE (even if not caught earlier)
+            if ((currentEvent._dtstartParams?.VALUE === 'DATE' || currentEvent._dtstartValue?.length === 8) &&
+                (currentEvent._dtendParams?.VALUE === 'DATE' || currentEvent._dtendValue?.length === 8)) {
               currentEvent.isAllDay = true;
-              // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
+              // Normalize dates
+              const startDate = new Date(start);
+              startDate.setHours(0, 0, 0, 0);
               currentEvent.start = startDate;
               currentEvent.end = new Date(startDate);
               currentEvent.end.setDate(currentEvent.end.getDate() + 1);
+              start = startDate;
+              end = currentEvent.end;
+              console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title, 'on', startDate.toDateString());
+            } else {
+              // Check if start and end are on the same calendar date (ignoring time)
+              const startDate = new Date(start);
+              startDate.setHours(0, 0, 0, 0);
+              const endDate = new Date(end);
+              endDate.setHours(0, 0, 0, 0);
+              
+              // If start and end are the same date, treat as all-day event
+              // Also check if times are identical (within 1 second)
+              const timeDiff = Math.abs(end.getTime() - start.getTime());
+              if (startDate.getTime() === endDate.getTime() || timeDiff < 1000) {
+                currentEvent.isAllDay = true;
+                // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
+                currentEvent.start = startDate;
+                currentEvent.end = new Date(startDate);
+                currentEvent.end.setDate(currentEvent.end.getDate() + 1);
+                start = startDate;
+                end = currentEvent.end;
+                console.log('📅 Detected all-day event (same date):', currentEvent.title, 'on', startDate.toDateString());
+              }
             }
           }
           
-          // Only include events that overlap with our date range
-          if (end >= startRange && start <= endRange) {
-            events.push(currentEvent);
-          }
+          // Clean up temporary properties
+          delete currentEvent._dtstartValue;
+          delete currentEvent._dtstartParams;
+          delete currentEvent._dtendValue;
+          delete currentEvent._dtendParams;
+          
+          // Include ALL events with valid dates - maximum permissiveness
+          // The calendar widget will handle what to display based on its date range
+          events.push(currentEvent);
         }
         currentEvent = null;
         continuationLine = '';
@@ -179,9 +203,16 @@ class GoogleCalendarClient {
     
     if (baseKey.startsWith('DTSTART')) {
       currentEvent.start = this.parseIcsDate(value, paramMap);
-      currentEvent.isAllDay = !baseKey.includes('T') || paramMap.VALUE === 'DATE';
+      // Check if it's an all-day event: VALUE=DATE parameter or no time component (8 digits)
+      currentEvent.isAllDay = paramMap.VALUE === 'DATE' || (!baseKey.includes('T') && value.length === 8);
+      // Store the original value for later validation
+      currentEvent._dtstartValue = value;
+      currentEvent._dtstartParams = paramMap;
     } else if (baseKey.startsWith('DTEND')) {
       currentEvent.end = this.parseIcsDate(value, paramMap);
+      // Store the original value for later validation
+      currentEvent._dtendValue = value;
+      currentEvent._dtendParams = paramMap;
     } else if (baseKey === 'SUMMARY') {
       currentEvent.title = this.unescapeIcsText(value);
     } else if (baseKey === 'DESCRIPTION') {
