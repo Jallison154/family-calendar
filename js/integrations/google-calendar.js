@@ -129,6 +129,26 @@ class GoogleCalendarClient {
           const start = new Date(currentEvent.start);
           const end = new Date(currentEvent.end);
           
+          // Detect all-day events: if start and end are on the same calendar date (ignoring time)
+          // This handles cases where events are created "with no time" but exported with timestamps
+          // Also handle cases where start and end times are identical (same timestamp)
+          if (!currentEvent.isAllDay) {
+            const startDate = new Date(start);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(end);
+            endDate.setHours(0, 0, 0, 0);
+            
+            // If start and end are the same date (or start/end times are identical), treat as all-day event
+            const timeDiff = Math.abs(end.getTime() - start.getTime());
+            if (startDate.getTime() === endDate.getTime() || timeDiff < 1000) {
+              currentEvent.isAllDay = true;
+              // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
+              currentEvent.start = startDate;
+              currentEvent.end = new Date(startDate);
+              currentEvent.end.setDate(currentEvent.end.getDate() + 1);
+            }
+          }
+          
           // Only include events that overlap with our date range
           if (end >= startRange && start <= endRange) {
             events.push(currentEvent);
