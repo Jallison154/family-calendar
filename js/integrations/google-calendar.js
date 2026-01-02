@@ -155,8 +155,8 @@ class GoogleCalendarClient {
           // This handles cases where events are created "with no time" but exported with timestamps
           if (!currentEvent.isAllDay) {
             // Check if both DTSTART and DTEND use VALUE=DATE (even if not caught earlier)
-            if ((currentEvent._dtstartParams?.VALUE === 'DATE' || currentEvent._dtstartValue?.length === 8) &&
-                (currentEvent._dtendParams?.VALUE === 'DATE' || currentEvent._dtendValue?.length === 8)) {
+            if ((currentEvent._dtstartParams?.VALUE === 'DATE' || (currentEvent._dtstartValue && currentEvent._dtstartValue.length === 8 && !currentEvent._dtstartValue.includes('T'))) &&
+                (currentEvent._dtendParams?.VALUE === 'DATE' || (currentEvent._dtendValue && currentEvent._dtendValue.length === 8 && !currentEvent._dtendValue.includes('T')))) {
               currentEvent.isAllDay = true;
               // Normalize dates
               const startDate = new Date(start);
@@ -166,7 +166,7 @@ class GoogleCalendarClient {
               currentEvent.end.setDate(currentEvent.end.getDate() + 1);
               start = startDate;
               end = currentEvent.end;
-              console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title, 'on', startDate.toDateString());
+              console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
             } else {
               // Check if start and end are on the same calendar date (ignoring time)
               const startDate = new Date(start);
@@ -176,8 +176,13 @@ class GoogleCalendarClient {
               
               // If start and end are the same date, treat as all-day event
               // Also check if times are identical (within 1 second)
+              // OR if the end is exactly 1 day after start (common for all-day events)
               const timeDiff = Math.abs(end.getTime() - start.getTime());
-              if (startDate.getTime() === endDate.getTime() || timeDiff < 1000) {
+              const oneDayMs = 24 * 60 * 60 * 1000;
+              
+              if (startDate.getTime() === endDate.getTime() || 
+                  timeDiff < 1000 || 
+                  (Math.abs(timeDiff - oneDayMs) < 1000 && start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 0 && end.getMinutes() === 0)) {
                 currentEvent.isAllDay = true;
                 // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
                 currentEvent.start = startDate;
@@ -185,7 +190,7 @@ class GoogleCalendarClient {
                 currentEvent.end.setDate(currentEvent.end.getDate() + 1);
                 start = startDate;
                 end = currentEvent.end;
-                console.log('📅 Detected all-day event (same date):', currentEvent.title, 'on', startDate.toDateString());
+                console.log('📅 Detected all-day event (same date/midnight):', currentEvent.title || 'Untitled', 'start:', start.toISOString(), 'end:', end.toISOString());
               }
             }
           }
@@ -199,6 +204,12 @@ class GoogleCalendarClient {
           // Include ALL events with valid dates - maximum permissiveness
           // The calendar widget will handle what to display based on its date range
           events.push(currentEvent);
+          
+          // Debug logging for events with no time
+          if (currentEvent.isAllDay) {
+            console.log('📅 All-day event added:', currentEvent.title || 'Untitled', 'start:', currentEvent.start.toISOString(), 'end:', currentEvent.end.toISOString());
+          }
+          
           if (!currentEvent.title) {
             console.warn('⚠️ Event has no title:', currentEvent);
           }
@@ -235,6 +246,10 @@ class GoogleCalendarClient {
       currentEvent._dtstartParams = paramMap;
     } else if (baseKey.startsWith('DTEND')) {
       currentEvent.end = this.parseIcsDate(value, paramMap);
+      // Update isAllDay flag: if DTEND is also DATE format, it's definitely all-day
+      if (paramMap.VALUE === 'DATE' || (!baseKey.includes('T') && !value.includes('T') && value.length === 8)) {
+        currentEvent.isAllDay = true;
+      }
       // Store the original value for later validation
       currentEvent._dtendValue = value;
       currentEvent._dtendParams = paramMap;
