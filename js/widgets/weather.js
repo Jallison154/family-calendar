@@ -220,16 +220,16 @@ class WeatherWidget extends BaseWidget {
 
     body.innerHTML = `
       <div class="weather-current">
-        ${data.iconUrl ? `<img src="${data.iconUrl}" alt="${data.condition}" class="weather-icon-img" style="width: 4rem; height: 4rem;">` : `<span class="weather-icon">${data.icon}</span>`}
+        ${data.iconUrl ? `<img src="${data.iconUrl}" alt="${data.condition}" class="weather-icon-img" style="width: 2.5rem; height: 2.5rem;">` : `<span class="weather-icon">${data.icon}</span>`}
         <div>
           <div class="weather-temp">${data.temp}${data.unit}</div>
-          <div style="font-size: 1.25rem; color: var(--color-text-secondary);">${data.condition}</div>
+          <div style="font-size: 0.875rem; color: var(--color-text-secondary);">${data.condition}</div>
         </div>
       </div>
       <div class="weather-details">
         <div class="weather-detail">
           <div class="weather-detail-value">${data.feelsLike}${data.unit}</div>
-          <div class="weather-detail-label">Feels Like</div>
+          <div class="weather-detail-label">Feels</div>
         </div>
         ${data.humidity !== null ? `
         <div class="weather-detail">
@@ -244,9 +244,11 @@ class WeatherWidget extends BaseWidget {
         </div>
         ` : ''}
       </div>
+      ${forecast.length > 0 ? `
       <div class="weather-forecast">
         ${forecastHTML}
       </div>
+      ` : ''}
     `;
   }
 

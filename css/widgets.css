@@ -5,11 +5,24 @@
 /* Clock Widget */
 .widget-clock {
   grid-column: span 4;
-  grid-row: span 3;
+  grid-row: span 1;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.widget-clock .widget-body {
+  padding: 0;
+  text-align: right;
 }
 
 .clock-display {
-  font-size: 8rem;
+  font-size: 4rem;
   font-weight: 200;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -21,41 +34,53 @@
 }
 
 .clock-date {
-  font-size: 2rem;
+  font-size: 1.25rem;
   font-weight: 400;
   color: var(--color-text-secondary);
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 /* Weather Widget */
 .widget-weather {
   grid-column: span 4;
-  grid-row: span 3;
+  grid-row: span 1;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.widget-weather .widget-body {
+  padding: 0;
+  width: 100%;
 }
 
 .weather-current {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-.weather-icon {
-  font-size: 4rem;
+.widget-weather .weather-icon {
+  font-size: 2.5rem;
 }
 
-.weather-temp {
-  font-size: 5rem;
+.widget-weather .weather-temp {
+  font-size: 2.5rem;
   font-weight: 200;
   line-height: 1;
 }
 
 .weather-details {
   display: flex;
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .weather-detail {
@@ -64,52 +89,52 @@
 }
 
 .weather-detail-value {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
 .weather-detail-label {
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
 }
 
 .weather-forecast {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   overflow-x: auto;
 }
 
 .forecast-day {
   flex: 1;
   text-align: center;
-  padding: 1rem;
+  padding: 0.5rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-sm);
-  min-width: 100px;
+  min-width: 60px;
 }
 
 .forecast-day-name {
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .forecast-icon {
-  font-size: 2rem;
-  margin: 0.5rem 0;
+  font-size: 1.25rem;
+  margin: 0.25rem 0;
 }
 
 .forecast-high {
-  font-size: 1.25rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
 .forecast-low {
-  font-size: 1rem;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
 }
 
@@ -184,8 +209,36 @@
 
 /* Home Assistant Widget */
 .widget-homeassistant {
-  grid-column: span 6;
-  grid-row: span 2;
+  grid-column: span 3;
+  grid-row: span 1;
+}
+
+.widget-homeassistant .entity-grid {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.widget-homeassistant .entity-card {
+  padding: 0.5rem;
+}
+
+.widget-homeassistant .entity-icon {
+  font-size: 1.5rem;
+  min-height: 2rem;
+}
+
+.widget-homeassistant .ha-entity-icon-img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.widget-homeassistant .entity-name {
+  font-size: 0.7rem;
+  margin-bottom: 0.25rem;
+}
+
+.widget-homeassistant .entity-value {
+  font-size: 1rem;
 }
 
 .entity-grid {
@@ -310,13 +363,13 @@
 
 /* Dad Joke Widget */
 .widget-dadjoke {
-  grid-column: span 6;
-  grid-row: span 2;
+  grid-column: span 3;
+  grid-row: span 1;
 }
 
 .joke-content {
-  font-size: 1.25rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  line-height: 1.4;
   color: var(--color-text-secondary);
   font-style: italic;
   display: flex;
@@ -324,7 +377,7 @@
   justify-content: center;
   height: 100%;
   text-align: center;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 /* Loading and Error States */

@@ -52,21 +52,21 @@ const CONFIG = {
   layout: {
     widgets: [
       {
+        id: 'weather',
+        type: 'weather',
+        gridColumn: '1 / 5',
+        gridRow: '1 / 2'
+      },
+      {
         id: 'clock',
         type: 'clock',
-        gridColumn: '1 / 5',
-        gridRow: '1 / 4'
+        gridColumn: '9 / 13',
+        gridRow: '1 / 2'
       },
       {
         id: 'spotify',
         type: 'spotify',
         gridColumn: '5 / 9',
-        gridRow: '1 / 4'
-      },
-      {
-        id: 'weather',
-        type: 'weather',
-        gridColumn: '9 / 13',
         gridRow: '1 / 4'
       },
       {
@@ -84,8 +84,14 @@ const CONFIG = {
       {
         id: 'homeassistant',
         type: 'homeassistant',
-        gridColumn: '7 / 13',
-        gridRow: '10 / 13'
+        gridColumn: '7 / 10',
+        gridRow: '10 / 11'
+      },
+      {
+        id: 'dadjoke',
+        type: 'dadjoke',
+        gridColumn: '10 / 13',
+        gridRow: '10 / 11'
       }
     ]
   }
