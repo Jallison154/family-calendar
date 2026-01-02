@@ -84,6 +84,7 @@
       max-width: 800px;
       margin: 0 auto;
       padding: 1.5rem;
+      padding-bottom: 100px; /* Add padding at bottom to prevent content from being hidden behind fixed actions bar */
     }
     
     .card {
@@ -233,8 +234,14 @@
       padding: 1.25rem;
       background: var(--color-surface);
       border-top: 1px solid var(--color-border);
-      position: sticky;
+      position: fixed;
       bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 800px;
+      z-index: 100;
+      box-sizing: border-box;
     }
     
     .actions .btn-primary { flex: 1; }
@@ -306,7 +313,7 @@
 
   <div class="container">
     <!-- Display -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>🖥️ Display</h2>
         <span class="card-toggle">▼</span>
@@ -330,7 +337,7 @@
     </div>
 
     <!-- Dad Jokes -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>😄 Dad Jokes</h2>
         <span class="card-toggle">▼</span>
@@ -345,7 +352,7 @@
     </div>
 
     <!-- Background -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>🖼️ Background</h2>
         <span class="card-toggle">▼</span>
@@ -367,7 +374,7 @@
     </div>
 
     <!-- Calendar - ICS Feeds (Easy) -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>📅 Calendar - ICS Feeds (Recommended)</h2>
         <span class="card-toggle">▼</span>
@@ -398,7 +405,7 @@
     </div>
 
     <!-- Home Assistant -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>🏠 Home Assistant</h2>
         <span class="card-toggle">▼</span>
@@ -420,7 +427,7 @@
     </div>
 
     <!-- Weather -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>🌤️ Weather</h2>
         <span class="card-toggle">▼</span>
@@ -462,7 +469,7 @@
     </div>
 
     <!-- Countdowns -->
-    <div class="card">
+    <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
         <h2>⏰ Countdown Events</h2>
         <span class="card-toggle">▼</span>
@@ -489,42 +496,23 @@ New Year, 2026-01-01"></textarea>
   <script src="js/api.js"></script>
   <script>
     const STORAGE_KEY = 'familyDashboardSettings';
-    const COLLAPSE_STORAGE_KEY = 'dashboardControlCollapsed';
     let calendarAccountCount = 0;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      restoreCollapsedState();
       await loadSettings();
     });
     
     function toggleCard(header) {
       const card = header.closest('.card');
-      card.classList.toggle('collapsed');
-      saveCollapsedState();
-    }
-    
-    function saveCollapsedState() {
-      const cards = document.querySelectorAll('.card');
-      const collapsed = Array.from(cards)
-        .map((card, index) => card.classList.contains('collapsed') ? index : null)
-        .filter(i => i !== null);
-      localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapsed));
-    }
-    
-    function restoreCollapsedState() {
-      try {
-        const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY);
-        if (saved) {
-          const collapsed = JSON.parse(saved);
-          const cards = document.querySelectorAll('.card');
-          collapsed.forEach(index => {
-            if (cards[index]) {
-              cards[index].classList.add('collapsed');
-            }
-          });
-        }
-      } catch (e) {
-        // Ignore errors
+      const wasCollapsed = card.classList.contains('collapsed');
+      
+      // Close all cards first (accordion behavior)
+      const allCards = document.querySelectorAll('.card');
+      allCards.forEach(c => c.classList.add('collapsed'));
+      
+      // If this card was collapsed, open it (toggle behavior)
+      if (wasCollapsed) {
+        card.classList.remove('collapsed');
       }
     }
 
