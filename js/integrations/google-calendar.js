@@ -47,13 +47,15 @@ class GoogleCalendarClient {
       }
     }
     
+    // Use server-side proxy instead of CORS proxy (more reliable)
+    const proxyUrl = '/api/calendar?url=' + encodeURIComponent(url);
+    
     // Use AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
     try {
-      const proxyUrl = this.config.corsProxy + encodeURIComponent(url);
-      console.log(`📅 Fetching ICS feed: ${feed.name || 'Unnamed'}`);
+      console.log(`📅 Fetching ICS feed via server proxy: ${feed.name || 'Unnamed'}`);
       
       const response = await fetch(proxyUrl, {
         signal: controller.signal,
@@ -65,7 +67,15 @@ class GoogleCalendarClient {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text().catch(() => '');
+        let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error) errorMsg = errorJson.error;
+        } catch (e) {
+          // Not JSON, use text as-is
+        }
+        throw new Error(errorMsg);
       }
       
       const icsText = await response.text();
