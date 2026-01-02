@@ -62,3 +62,5 @@ sudo ./deploy/setup-server.sh
 - `/opt/family-calendar` - Alternative location
 - `~/Family-Calendar` - Your home directory
 
+
+
