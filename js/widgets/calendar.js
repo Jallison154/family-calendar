@@ -215,7 +215,7 @@ class CalendarWidget extends BaseWidget {
       const time = event.isAllDay ? '' : Helpers.formatTime(new Date(event.start), false);
       return `
         <div class="calendar-event" style="--event-color: ${color}">
-          ${time ? `<span style="font-size: 0.75rem; opacity: 0.8;">${time}</span> ` : ''}
+          ${time ? `<span style="font-size: 0.375rem; opacity: 0.8;">${time}</span> ` : ''}
           <span>${title}</span>
         </div>
       `;

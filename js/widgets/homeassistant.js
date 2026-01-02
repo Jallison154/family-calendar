@@ -65,11 +65,13 @@ class HomeAssistantWidget extends BaseWidget {
       if (!state) return '';
 
       const value = this.formatValue(state);
-      const icon = this.getIcon(state);
+      const iconHtml = this.getIconHtml(state);
+      const isActive = this.isEntityActive(state);
+      const stateClass = this.getEntityStateClass(state);
 
       return `
-        <div class="entity-card">
-          <div class="entity-icon">${icon}</div>
+        <div class="entity-card ${stateClass} ${isActive ? 'entity-active' : ''}" data-entity-id="${entity.entityId}">
+          <div class="entity-icon">${iconHtml}</div>
           <div class="entity-name">${entity.name || entity.entityId}</div>
           <div class="entity-value">${value}</div>
         </div>
@@ -77,6 +79,21 @@ class HomeAssistantWidget extends BaseWidget {
     }).join('');
 
     body.innerHTML = `<div class="entity-grid">${entitiesHTML}</div>`;
+  }
+  
+  isEntityActive(state) {
+    if (!state) return false;
+    const activeStates = ['on', 'playing', 'home', 'open', 'heat', 'cool', 'active'];
+    return activeStates.includes(state.state?.toLowerCase());
+  }
+  
+  getEntityStateClass(state) {
+    if (!state) return '';
+    const stateStr = state.state?.toLowerCase() || '';
+    if (stateStr === 'unavailable' || stateStr === 'unknown') return 'entity-unavailable';
+    if (stateStr === 'on' || stateStr === 'playing') return 'entity-on';
+    if (stateStr === 'off' || stateStr === 'idle') return 'entity-off';
+    return 'entity-other';
   }
 
   onInit() {
@@ -137,9 +154,44 @@ class HomeAssistantWidget extends BaseWidget {
     return `${state.state}${unit ? ' ' + unit : ''}`;
   }
 
-  getIcon(state) {
-    const attrs = state.attributes;
-    return attrs.icon || '📊';
+  getIconHtml(state) {
+    const attrs = state.attributes || {};
+    
+    // First, try to use entity_picture (actual icon from Home Assistant)
+    const entityPicture = attrs.entity_picture;
+    if (entityPicture) {
+      let iconUrl = entityPicture;
+      
+      // If relative URL, construct full URL using Home Assistant base URL
+      if (!entityPicture.startsWith('http://') && !entityPicture.startsWith('https://')) {
+        if (this.haClient?.config?.url) {
+          const baseUrl = this.haClient.config.url.replace(/\/$/, '');
+          iconUrl = baseUrl + entityPicture;
+        }
+      }
+      
+      // Return image tag for the icon (don't escape URL, but escape alt text)
+      const entityName = state.entity_id || 'entity';
+      // Escape quotes in URL for HTML attribute safety
+      const safeUrl = String(iconUrl).replace(/"/g, '&quot;');
+      return `<img src="${safeUrl}" alt="${Helpers.escapeHtml(entityName)}" class="ha-entity-icon-img" loading="lazy">`;
+    }
+    
+    // Fallback to icon attribute (MDI icon name like "mdi:lightbulb")
+    // For now, we'll use emoji fallback, but could potentially use HA icon API
+    const iconName = attrs.icon;
+    if (iconName) {
+      // Try to render MDI icons using Home Assistant's icon API
+      if (iconName.startsWith('mdi:') && this.haClient?.config?.url) {
+        const baseUrl = this.haClient.config.url.replace(/\/$/, '');
+        // Home Assistant provides icons via /static/icons/{domain}/{icon}.png
+        // But entity_picture is preferred and more reliable
+        // For now, fall through to emoji fallback
+      }
+    }
+    
+    // Final fallback to emoji
+    return '📊';
   }
 
   showLoading() {

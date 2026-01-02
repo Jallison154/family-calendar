@@ -420,8 +420,25 @@
           <input type="password" class="form-input" id="ha-token" placeholder="Long-lived access token">
         </div>
         <div class="form-group">
-          <label class="form-label">Entities (one per line: entity_id, name, icon)</label>
-          <textarea class="form-textarea" id="ha-entities" placeholder="sensor.temperature, Temperature, thermometer"></textarea>
+          <button type="button" class="btn btn-secondary" onclick="loadHAEntities()" style="width: 100%; margin-bottom: 1rem;">
+            🔍 Load Entities from Home Assistant
+          </button>
+          <div id="ha-entities-loading" style="display: none; text-align: center; padding: 1rem; color: var(--color-text-muted);">
+            Loading entities...
+          </div>
+          <div id="ha-entities-error" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; color: var(--color-error); margin-bottom: 1rem;"></div>
+          <div id="ha-entities-browser" style="display: none;">
+            <div class="form-group">
+              <input type="text" class="form-input" id="ha-entity-search" placeholder="Search entities..." style="margin-bottom: 1rem;" oninput="filterHAEntities()">
+            </div>
+            <div id="ha-entities-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 8px; padding: 0.5rem;">
+              <!-- Entities will be loaded here -->
+            </div>
+          </div>
+          <div class="form-hint" style="margin-top: 1rem;">
+            Selected entities will appear on the dashboard. Names and icons are pulled directly from Home Assistant.
+          </div>
+          <textarea class="form-textarea" id="ha-entities" style="display: none;"></textarea>
         </div>
       </div>
     </div>
@@ -530,7 +547,7 @@ New Year, 2026-01-01"></textarea>
         }
       } else {
         // Fallback to localStorage if API not available
-        const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY);
         s = stored ? JSON.parse(stored) : {};
       }
 
@@ -618,11 +635,153 @@ New Year, 2026-01-01"></textarea>
         }
       } else {
         // Fallback to localStorage if API not available
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
         showToast('Settings saved locally (server not available).');
       }
       
       localStorage.setItem('dashboardUpdate', Date.now().toString());
+    }
+
+    let haEntitiesList = [];
+    let selectedHAEntities = new Set();
+
+    async function loadHAEntities() {
+      const url = document.getElementById('ha-url').value.trim();
+      const token = document.getElementById('ha-token').value.trim();
+      
+      if (!url || !token) {
+        showToast('Please enter Home Assistant URL and Access Token first', 'error');
+        return;
+      }
+
+      const loadingEl = document.getElementById('ha-entities-loading');
+      const errorEl = document.getElementById('ha-entities-error');
+      const browserEl = document.getElementById('ha-entities-browser');
+      const listEl = document.getElementById('ha-entities-list');
+      
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      browserEl.style.display = 'none';
+
+      try {
+        const baseUrl = url.replace(/\/$/, '');
+        const response = await fetch(`${baseUrl}/api/states`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const entities = await response.json();
+        
+        // Group by domain and sort
+        const entitiesByDomain = {};
+        entities.forEach(entity => {
+          const domain = entity.entity_id.split('.')[0];
+          if (!entitiesByDomain[domain]) {
+            entitiesByDomain[domain] = [];
+          }
+          entitiesByDomain[domain].push(entity);
+        });
+
+        // Get currently selected entities
+        const currentEntities = textToEntities(document.getElementById('ha-entities').value);
+        selectedHAEntities = new Set(currentEntities.map(e => e.entityId));
+
+        haEntitiesList = entities;
+        
+        // Render entity list
+        renderHAEntitiesList(entitiesByDomain);
+        
+        loadingEl.style.display = 'none';
+        browserEl.style.display = 'block';
+      } catch (error) {
+        console.error('Failed to load entities:', error);
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.textContent = `Failed to load entities: ${error.message}`;
+      }
+    }
+
+    function renderHAEntitiesList(entitiesByDomain) {
+      const listEl = document.getElementById('ha-entities-list');
+      const domains = Object.keys(entitiesByDomain).sort();
+      
+      let html = '';
+      domains.forEach(domain => {
+        html += `<div style="margin-bottom: 1rem;"><div style="font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.875rem;">${domain}</div>`;
+        entitiesByDomain[domain].sort((a, b) => {
+          const nameA = a.attributes?.friendly_name || a.entity_id;
+          const nameB = b.attributes?.friendly_name || b.entity_id;
+          return nameA.localeCompare(nameB);
+        }).forEach(entity => {
+          const entityId = entity.entity_id;
+          const name = entity.attributes?.friendly_name || entityId;
+          const iconUrl = entity.attributes?.entity_picture;
+          const icon = entity.attributes?.icon || '📊';
+          const isSelected = selectedHAEntities.has(entityId);
+          
+          html += `
+            <label class="ha-entity-item" style="display: flex; align-items: center; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.25rem; cursor: pointer; transition: background 0.2s;" 
+                   onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
+                   onmouseout="this.style.background='transparent'">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                     onchange="toggleHAEntity('${entityId}')" 
+                     style="margin-right: 0.75rem; cursor: pointer;">
+              <div style="width: 2rem; height: 2rem; margin-right: 0.75rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${iconUrl ? 
+                  `<img src="${iconUrl.startsWith('http') ? iconUrl : (document.getElementById('ha-url').value.replace(/\/$/, '') + iconUrl)}" alt="${name}" style="width: 100%; height: 100%; object-fit: contain;">` :
+                  `<span style="font-size: 1.5rem;">${icon}</span>`
+                }
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 500; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entityId}</div>
+              </div>
+            </label>
+          `;
+        });
+        html += '</div>';
+      });
+      
+      listEl.innerHTML = html;
+      updateHAEntitiesTextarea();
+    }
+
+    function toggleHAEntity(entityId) {
+      if (selectedHAEntities.has(entityId)) {
+        selectedHAEntities.delete(entityId);
+      } else {
+        selectedHAEntities.add(entityId);
+      }
+      updateHAEntitiesTextarea();
+    }
+
+    function filterHAEntities() {
+      const searchTerm = document.getElementById('ha-entity-search').value.toLowerCase();
+      const items = document.querySelectorAll('.ha-entity-item');
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+      });
+    }
+
+    function updateHAEntitiesTextarea() {
+      const entities = Array.from(selectedHAEntities).map(entityId => {
+        const entity = haEntitiesList.find(e => e.entity_id === entityId);
+        if (entity) {
+          return {
+            entityId: entityId,
+            name: entity.attributes?.friendly_name || entityId
+          };
+        }
+        return { entityId: entityId };
+      });
+      document.getElementById('ha-entities').value = entitiesToText(entities);
     }
 
     async function resetSettings() {
@@ -750,11 +909,20 @@ New Year, 2026-01-01"></textarea>
       input.click();
     }
 
-    function showToast(msg) {
+    function showToast(msg, type = 'success') {
       const t = document.getElementById('toast');
       t.textContent = msg;
+      t.className = 'toast';
+      if (type === 'error') {
+        t.style.background = 'var(--color-error)';
+      } else {
+        t.style.background = 'var(--color-success)';
+      }
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
+      setTimeout(() => {
+        t.classList.remove('show');
+        t.style.background = '';
+      }, 3000);
     }
 
     function renderCalendarAccounts(accounts) {
@@ -860,8 +1028,8 @@ New Year, 2026-01-01"></textarea>
 
     function calendarsToText(cals) { return (cals || []).map(c => `${c.id}, ${c.color}, ${c.name}`).join('\n'); }
     function textToCalendars(txt) { return (txt || '').split('\n').filter(l => l.trim()).map(l => { const [id, color, name] = l.split(',').map(s => s.trim()); return { id: id || 'primary', color: color || '#3b82f6', name: name || 'Calendar' }; }); }
-    function entitiesToText(ents) { return (ents || []).map(e => `${e.entityId}, ${e.name}, ${e.icon || 'default'}`).join('\n'); }
-    function textToEntities(txt) { return (txt || '').split('\n').filter(l => l.trim()).map(l => { const [entityId, name, icon] = l.split(',').map(s => s.trim()); return { entityId, name: name || entityId, icon: icon || 'default' }; }); }
+    function entitiesToText(ents) { return (ents || []).map(e => `${e.entityId}, ${e.name || e.entityId}`).join('\n'); }
+    function textToEntities(txt) { return (txt || '').split('\n').filter(l => l.trim()).map(l => { const parts = l.split(',').map(s => s.trim()); const entityId = parts[0]; const name = parts.slice(1).join(',') || entityId; return { entityId, name }; }); }
     function countdownsToText(cds) { return (cds || []).map(c => `${c.name}, ${c.date}`).join('\n'); }
     function textToCountdowns(txt) { return (txt || '').split('\n').filter(l => l.trim()).map(l => { const [name, date] = l.split(',').map(s => s.trim()); return { name, date }; }); }
   </script>

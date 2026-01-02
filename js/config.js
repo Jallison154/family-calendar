@@ -73,19 +73,19 @@ const CONFIG = {
         id: 'calendar',
         type: 'calendar',
         gridColumn: '1 / 13',
-        gridRow: '4 / 11'
+        gridRow: '4 / 10'
+      },
+      {
+        id: 'todays-events',
+        type: 'todays-events',
+        gridColumn: '1 / 7',
+        gridRow: '10 / 13'
       },
       {
         id: 'homeassistant',
         type: 'homeassistant',
-        gridColumn: '1 / 7',
-        gridRow: '11 / 13'
-      },
-      {
-        id: 'dadjoke',
-        type: 'dadjoke',
         gridColumn: '7 / 13',
-        gridRow: '11 / 13'
+        gridRow: '10 / 13'
       }
     ]
   }
