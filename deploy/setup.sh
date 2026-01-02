@@ -125,6 +125,16 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml;
     
+    # Proxy API requests to Python server
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
     location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
         expires 7d;
         add_header Cache-Control "public, immutable";

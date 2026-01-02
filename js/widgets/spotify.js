@@ -103,6 +103,11 @@ class SpotifyWidget extends BaseWidget {
   render(track) {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
+    
+    // Don't render if no track data provided
+    if (!track) {
+      return;
+    }
 
     body.innerHTML = `
       <div class="spotify-now-playing">
