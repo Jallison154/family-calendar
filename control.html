@@ -96,14 +96,42 @@
     .card-header {
       padding: 0.875rem 1.25rem;
       border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    
+    .card-header:hover {
+      background: var(--color-surface-alt);
     }
     
     .card-header h2 {
       font-size: 0.9375rem;
       font-weight: 600;
+      margin: 0;
+      flex: 1;
     }
     
-    .card-body { padding: 1.25rem; }
+    .card-toggle {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      transition: transform 0.2s;
+    }
+    
+    .card.collapsed .card-toggle {
+      transform: rotate(-90deg);
+    }
+    
+    .card-body { 
+      padding: 1.25rem;
+    }
+    
+    .card.collapsed .card-body {
+      display: none;
+    }
     
     .form-group { margin-bottom: 1rem; }
     .form-group:last-child { margin-bottom: 0; }
@@ -279,7 +307,10 @@
   <div class="container">
     <!-- Display -->
     <div class="card">
-      <div class="card-header"><h2>🖥️ Display</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>🖥️ Display</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">Greeting Name (leave empty to hide)</label>
@@ -300,7 +331,10 @@
 
     <!-- Dad Jokes -->
     <div class="card">
-      <div class="card-header"><h2>😄 Dad Jokes</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>😄 Dad Jokes</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">Rotation Interval (minutes)</label>
@@ -312,7 +346,10 @@
 
     <!-- Background -->
     <div class="card">
-      <div class="card-header"><h2>🖼️ Background</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>🖼️ Background</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">Unsplash API Key</label>
@@ -331,7 +368,10 @@
 
     <!-- Calendar - ICS Feeds (Easy) -->
     <div class="card">
-      <div class="card-header"><h2>📅 Calendar - ICS Feeds (Recommended)</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>📅 Calendar - ICS Feeds (Recommended)</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <p class="form-hint" style="margin-bottom: 1rem;">
           <strong>Easy setup - No API key needed!</strong><br>
@@ -343,8 +383,11 @@
     </div>
 
     <!-- Google Calendar API (Advanced) -->
-    <div class="card">
-      <div class="card-header"><h2>📅 Google Calendar API (Advanced)</h2></div>
+    <div class="card collapsed" id="card-calendar-advanced">
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>📅 Google Calendar API (Advanced)</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <p class="form-hint" style="margin-bottom: 1rem;">
           Optional: Use API for more features. Get API key from <a href="https://console.cloud.google.com" target="_blank" style="color: var(--color-accent);">Google Cloud Console</a>
@@ -356,7 +399,10 @@
 
     <!-- Home Assistant -->
     <div class="card">
-      <div class="card-header"><h2>🏠 Home Assistant</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>🏠 Home Assistant</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">URL</label>
@@ -375,7 +421,10 @@
 
     <!-- Weather -->
     <div class="card">
-      <div class="card-header"><h2>🌤️ Weather</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>🌤️ Weather</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <label class="form-checkbox" style="margin-bottom: 1rem;">
           <input type="checkbox" id="weather-use-ha">
@@ -414,7 +463,10 @@
 
     <!-- Countdowns -->
     <div class="card">
-      <div class="card-header"><h2>⏰ Countdown Events</h2></div>
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>⏰ Countdown Events</h2>
+        <span class="card-toggle">▼</span>
+      </div>
       <div class="card-body">
         <div class="form-group">
           <label class="form-label">Events (one per line: name, YYYY-MM-DD)</label>
@@ -437,11 +489,44 @@ New Year, 2026-01-01"></textarea>
   <script src="js/api.js"></script>
   <script>
     const STORAGE_KEY = 'familyDashboardSettings';
+    const COLLAPSE_STORAGE_KEY = 'dashboardControlCollapsed';
     let calendarAccountCount = 0;
 
     document.addEventListener('DOMContentLoaded', async () => {
+      restoreCollapsedState();
       await loadSettings();
     });
+    
+    function toggleCard(header) {
+      const card = header.closest('.card');
+      card.classList.toggle('collapsed');
+      saveCollapsedState();
+    }
+    
+    function saveCollapsedState() {
+      const cards = document.querySelectorAll('.card');
+      const collapsed = Array.from(cards)
+        .map((card, index) => card.classList.contains('collapsed') ? index : null)
+        .filter(i => i !== null);
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapsed));
+    }
+    
+    function restoreCollapsedState() {
+      try {
+        const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+        if (saved) {
+          const collapsed = JSON.parse(saved);
+          const cards = document.querySelectorAll('.card');
+          collapsed.forEach(index => {
+            if (cards[index]) {
+              cards[index].classList.add('collapsed');
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    }
 
     async function loadSettings() {
       // Try to load from server first
