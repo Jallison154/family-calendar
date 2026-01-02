@@ -424,7 +424,7 @@
 
 /* Today's Events Widget */
 .widget-todays-events {
-  grid-column: span 12;
+  grid-column: span 6;
   grid-row: span 2;
 }
 

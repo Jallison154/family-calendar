@@ -3,8 +3,8 @@
    ============================================ */
 
 .widget-spotify {
-  grid-column: span 12;
-  grid-row: span 1;
+  grid-column: span 6;
+  grid-row: span 2;
   display: none; /* Hidden by default, shown when playing */
 }
 

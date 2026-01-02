@@ -66,20 +66,20 @@ const CONFIG = {
       {
         id: 'spotify',
         type: 'spotify',
-        gridColumn: '1 / 13',
-        gridRow: '2 / 3'
+        gridColumn: '7 / 13',
+        gridRow: '2 / 4'
       },
       {
         id: 'todays-events',
         type: 'todays-events',
-        gridColumn: '1 / 13',
-        gridRow: '3 / 5'
+        gridColumn: '1 / 7',
+        gridRow: '2 / 4'
       },
       {
         id: 'calendar',
         type: 'calendar',
         gridColumn: '1 / 13',
-        gridRow: '5 / 11'
+        gridRow: '4 / 11'
       },
       {
         id: 'homeassistant',
