@@ -91,37 +91,49 @@ const CONFIG = {
 };
 
 // Load from server (async, will be called on app init)
+// Prioritizes server settings, falls back to localStorage if server unavailable
 async function loadConfigFromServer() {
+  // Try server first
   if (typeof window !== 'undefined' && window.settingsAPI) {
     try {
       const serverConfig = await window.settingsAPI.fetch();
       if (serverConfig && Object.keys(serverConfig).length > 0) {
         Object.assign(CONFIG, serverConfig);
         console.log('✓ Config loaded from server');
+        // Clear localStorage to prevent conflicts (server is source of truth)
+        if (typeof Storage !== 'undefined') {
+          localStorage.removeItem('familyDashboardSettings');
+          localStorage.removeItem('familyDashboardConfig');
+        }
+        return true; // Successfully loaded from server
       }
     } catch (e) {
       console.warn('Failed to load config from server:', e);
     }
   }
-}
-
-// Also try localStorage as fallback (for backward compatibility)
-if (typeof Storage !== 'undefined') {
-  const stored = localStorage.getItem('familyDashboardSettings') || localStorage.getItem('familyDashboardConfig');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      Object.assign(CONFIG, parsed);
-      console.log('✓ Config loaded from localStorage (fallback)');
-    } catch (e) {
-      console.warn('Failed to parse stored config:', e);
+  
+  // Fallback to localStorage only if server failed/unavailable
+  if (typeof Storage !== 'undefined') {
+    const stored = localStorage.getItem('familyDashboardSettings') || localStorage.getItem('familyDashboardConfig');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        Object.assign(CONFIG, parsed);
+        console.log('✓ Config loaded from localStorage (server unavailable)');
+        return false; // Loaded from localStorage (fallback)
+      } catch (e) {
+        console.warn('Failed to parse stored config:', e);
+      }
     }
   }
+  
+  return false; // No config loaded
 }
 
 // Export
 if (typeof window !== 'undefined') {
   window.CONFIG = CONFIG;
+  window.loadConfigFromServer = loadConfigFromServer;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
