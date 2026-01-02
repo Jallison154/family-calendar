@@ -202,6 +202,35 @@ class CalendarWidget extends BaseWidget {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
+  /**
+   * Check if a color is light (close to white)
+   * Returns true if the color is light enough to need black text
+   */
+  isLightColor(color) {
+    if (!color) return false;
+    
+    // Remove # if present
+    let hex = color.replace('#', '');
+    
+    // Handle 3-digit hex colors
+    if (hex.length === 3) {
+      hex = hex.split('').map(c => c + c).join('');
+    }
+    
+    // Parse RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance (perceived brightness)
+    // Using the formula from WCAG: 0.2126*R + 0.7152*G + 0.0722*B
+    // Normalized to 0-1 range
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    
+    // If luminance is above 0.7, consider it light (needs black text)
+    return luminance > 0.7;
+  }
+
   renderDayEvents(events) {
     if (events.length === 0) return '';
     
@@ -211,10 +240,13 @@ class CalendarWidget extends BaseWidget {
     
     return visible.map(event => {
       const color = event.color || '#3b82f6';
+      const isLight = this.isLightColor(color);
+      const textColor = isLight ? 'black' : 'white';
+      const textShadow = isLight ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.2)';
       const title = Helpers.escapeHtml(event.title);
       const time = event.isAllDay ? '' : Helpers.formatTime(new Date(event.start), false);
       return `
-        <div class="calendar-event" style="--event-color: ${color}">
+        <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
           ${time ? `<span style="font-size: 0.375rem; opacity: 0.8;">${time}</span> ` : ''}
           <span>${title}</span>
         </div>

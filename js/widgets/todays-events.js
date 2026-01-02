@@ -47,17 +47,32 @@ class TodaysEventsWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
+    // Get today's date string
+    const todayDateStr = this.today.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
     // Get today's events
     const todayKey = this.dateKey(this.today);
     const todayEvents = this.getTodaysEvents();
     
+    let html = `
+      <div class="todays-section-header">
+        <div class="todays-section-title">Today</div>
+        <div class="todays-section-date">${todayDateStr}</div>
+      </div>
+    `;
+
     if (todayEvents.length === 0) {
-      body.innerHTML = `
+      html += `
         <div class="todays-events-empty">
           <div class="todays-events-empty-icon">✨</div>
           <div class="todays-events-empty-text">No events scheduled for today</div>
         </div>
       `;
+      body.innerHTML = html;
       return;
     }
 
@@ -70,7 +85,7 @@ class TodaysEventsWidget extends BaseWidget {
     });
 
     const now = new Date();
-    let html = '<div class="todays-events-list">';
+    html += '<div class="todays-events-list">';
     
     todayEvents.forEach(event => {
       const start = new Date(event.start);
@@ -134,6 +149,35 @@ class TodaysEventsWidget extends BaseWidget {
     }
     
     return events;
+  }
+
+  /**
+   * Check if a color is light (close to white)
+   * Returns true if the color is light enough to need black text
+   */
+  isLightColor(color) {
+    if (!color) return false;
+    
+    // Remove # if present
+    let hex = color.replace('#', '');
+    
+    // Handle 3-digit hex colors
+    if (hex.length === 3) {
+      hex = hex.split('').map(c => c + c).join('');
+    }
+    
+    // Parse RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance (perceived brightness)
+    // Using the formula from WCAG: 0.2126*R + 0.7152*G + 0.0722*B
+    // Normalized to 0-1 range
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    
+    // If luminance is above 0.7, consider it light (needs black text)
+    return luminance > 0.7;
   }
 
   dateKey(date) {
