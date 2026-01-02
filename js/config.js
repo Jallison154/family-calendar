@@ -1,6 +1,7 @@
 /**
  * Dashboard Configuration
  * Edit via Control Panel (control.html) for live updates
+ * Settings are loaded from the server (settings.json) - server is source of truth
  */
 
 const CONFIG = {
@@ -90,50 +91,109 @@ const CONFIG = {
   }
 };
 
-// Load from server (async, will be called on app init)
-// Prioritizes server settings, falls back to localStorage if server unavailable
+// Config loading state
+let configLoaded = false;
+let configLoadPromise = null;
+
+/**
+ * Load configuration from server (source of truth)
+ * Falls back to localStorage only if server is completely unavailable
+ */
 async function loadConfigFromServer() {
-  // Try server first
+  // If already loaded in this session, don't reload
+  if (configLoaded) {
+    return true;
+  }
+  
+  // If already loading, wait for that promise
+  if (configLoadPromise) {
+    return await configLoadPromise;
+  }
+  
+  // Start loading
+  configLoadPromise = (async () => {
+  // Try server first (server is source of truth)
   if (typeof window !== 'undefined' && window.settingsAPI) {
     try {
       const serverConfig = await window.settingsAPI.fetch();
       if (serverConfig && Object.keys(serverConfig).length > 0) {
-        Object.assign(CONFIG, serverConfig);
-        console.log('✓ Config loaded from server');
-        // Clear localStorage to prevent conflicts (server is source of truth)
+        // Deep merge server config into CONFIG
+        deepMerge(CONFIG, serverConfig);
+        console.log('✓ Config loaded from server (source of truth)');
+        // Clear localStorage after successful server load (server is source of truth)
         if (typeof Storage !== 'undefined') {
           localStorage.removeItem('familyDashboardSettings');
           localStorage.removeItem('familyDashboardConfig');
         }
-        return true; // Successfully loaded from server
+        configLoaded = true;
+        return true;
+      } else {
+        console.log('ℹ Server returned empty config, using defaults');
+        // Clear localStorage even if server returns empty (server is source of truth)
+        if (typeof Storage !== 'undefined') {
+          localStorage.removeItem('familyDashboardSettings');
+          localStorage.removeItem('familyDashboardConfig');
+        }
+        configLoaded = true;
+        return true;
       }
     } catch (e) {
-      console.warn('Failed to load config from server:', e);
+      console.warn('⚠ Failed to load config from server:', e);
+      console.warn('⚠ Falling back to localStorage (if available)');
     }
+  } else {
+    console.warn('⚠ settingsAPI not available, trying localStorage fallback');
   }
   
-  // Fallback to localStorage only if server failed/unavailable
+  // Fallback to localStorage only if server completely failed/unavailable
   if (typeof Storage !== 'undefined') {
     const stored = localStorage.getItem('familyDashboardSettings') || localStorage.getItem('familyDashboardConfig');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        Object.assign(CONFIG, parsed);
-        console.log('✓ Config loaded from localStorage (server unavailable)');
-        return false; // Loaded from localStorage (fallback)
+        deepMerge(CONFIG, parsed);
+        console.log('⚠ Config loaded from localStorage (server unavailable - this is a fallback)');
+        configLoaded = true;
+        return false; // Indicates fallback was used
       } catch (e) {
         console.warn('Failed to parse stored config:', e);
       }
     }
   }
   
-  return false; // No config loaded
+    console.log('ℹ Using default config (no server or localStorage available)');
+    configLoaded = true;
+    return false;
+  })();
+  
+  return await configLoadPromise;
+}
+
+/**
+ * Deep merge objects (helper function)
+ */
+function deepMerge(target, source) {
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (!target[key]) target[key] = {};
+      deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
 }
 
 // Export
 if (typeof window !== 'undefined') {
   window.CONFIG = CONFIG;
   window.loadConfigFromServer = loadConfigFromServer;
+  
+  // Start loading config immediately when script loads
+  // This ensures server settings are loaded before app.js runs
+  (async () => {
+    await loadConfigFromServer();
+  })();
 }
 
 if (typeof module !== 'undefined' && module.exports) {

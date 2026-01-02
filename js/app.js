@@ -16,12 +16,13 @@ class DashboardApp {
   async init() {
     console.log('🚀 Initializing Family Calendar Dashboard...');
     
-    // Load config from server first
+    // Ensure config is loaded from server first (wait if already loading)
     if (typeof window.loadConfigFromServer === 'function') {
       await window.loadConfigFromServer();
-      // Refresh config reference
-      this.config = window.CONFIG || {};
     }
+    // Always refresh config reference after loading
+    this.config = window.CONFIG || {};
+    console.log('📋 Using config:', this.config);
     
     // Initialize Unsplash Background Slideshow
     if (this.config.unsplash && window.UnsplashSlideshow) {
