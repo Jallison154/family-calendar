@@ -48,6 +48,18 @@ if [ ! -f "$PROJECT_DIR/server.py" ]; then
     exit 1
 fi
 
+# Step 0: Pull latest code from git (if this is a git repo)
+if [ -d "$PROJECT_DIR/.git" ]; then
+    echo "🔄 Pulling latest code from git..."
+    cd "$PROJECT_DIR"
+    git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+    if git pull origin main 2>/dev/null || git pull origin master 2>/dev/null; then
+        echo "   ✓ Code updated from git"
+    else
+        echo "   ⚠ Could not pull from git (continuing with existing code)"
+    fi
+fi
+
 # Step 1: Stop and remove existing service
 echo "🛑 Stopping existing service (if running)..."
 systemctl stop "$SERVICE_NAME" 2>/dev/null || true
