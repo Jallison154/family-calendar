@@ -485,6 +485,21 @@
       </div>
     </div>
 
+    <!-- Spotify -->
+    <div class="card collapsed">
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>🎵 Spotify</h2>
+        <span class="card-toggle">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Home Assistant Media Player Entity</label>
+          <input type="text" class="form-input" id="spotify-entity" placeholder="media_player.spotify">
+          <p class="form-hint">The Spotify widget displays "Now Playing" information when music is playing. Enter your Home Assistant media player entity ID (e.g., <code>media_player.spotify</code>, <code>media_player.spotify_jonathan</code>, etc.)</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Countdowns -->
     <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
@@ -575,6 +590,8 @@ New Year, 2026-01-01"></textarea>
       document.getElementById('owm-lon').value = s.weather?.openWeatherMap?.lon || '';
       document.getElementById('owm-units').value = s.weather?.openWeatherMap?.units || 'imperial';
 
+      document.getElementById('spotify-entity').value = s.spotify?.mediaPlayerEntity || 'media_player.spotify';
+
       document.getElementById('countdowns').value = countdownsToText(s.countdowns || []);
     }
 
@@ -618,6 +635,9 @@ New Year, 2026-01-01"></textarea>
             lon: parseFloat(document.getElementById('owm-lon').value) || 0,
             units: document.getElementById('owm-units').value
           }
+        },
+        spotify: {
+          mediaPlayerEntity: document.getElementById('spotify-entity').value || 'media_player.spotify'
         },
         countdowns: textToCountdowns(document.getElementById('countdowns').value)
       };
