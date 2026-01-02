@@ -54,44 +54,44 @@ const CONFIG = {
       {
         id: 'weather',
         type: 'weather',
-        gridColumn: '1 / 4',
+        gridColumn: '1 / 7',
         gridRow: '1 / 2'
       },
       {
         id: 'clock',
         type: 'clock',
-        gridColumn: '10 / 13',
+        gridColumn: '7 / 13',
         gridRow: '1 / 2'
       },
       {
         id: 'spotify',
         type: 'spotify',
-        gridColumn: '4 / 10',
-        gridRow: '1 / 3'
+        gridColumn: '1 / 13',
+        gridRow: '2 / 3'
       },
       {
         id: 'todays-events',
         type: 'todays-events',
-        gridColumn: '1 / 7',
-        gridRow: '2 / 7'
+        gridColumn: '1 / 13',
+        gridRow: '3 / 6'
       },
       {
         id: 'calendar',
         type: 'calendar',
-        gridColumn: '7 / 13',
-        gridRow: '2 / 9'
+        gridColumn: '1 / 13',
+        gridRow: '6 / 10'
       },
       {
         id: 'homeassistant',
         type: 'homeassistant',
-        gridColumn: '1 / 4',
-        gridRow: '7 / 9'
+        gridColumn: '1 / 7',
+        gridRow: '10 / 12'
       },
       {
         id: 'dadjoke',
         type: 'dadjoke',
-        gridColumn: '4 / 7',
-        gridRow: '7 / 9'
+        gridColumn: '7 / 13',
+        gridRow: '10 / 12'
       }
     ]
   }

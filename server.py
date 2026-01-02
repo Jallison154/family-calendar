@@ -12,6 +12,8 @@ import threading
 from datetime import datetime
 import urllib.request
 import urllib.error
+import hashlib
+import glob
 
 SETTINGS_FILE = 'settings.json'
 SETTINGS_LOCK = threading.Lock()
@@ -29,6 +31,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         # API endpoint for proxying calendar ICS feeds
         if parsed_path.path == '/api/calendar':
             self.proxy_calendar()
+            return
+        
+        # API endpoint for getting server version
+        if parsed_path.path == '/api/version':
+            self.send_version()
             return
         
         # Serve static files
@@ -167,6 +174,50 @@ class DashboardHandler(BaseHTTPRequestHandler):
             print(f"Error serving file {file_path}: {e}")
             self.send_response(500)
             self.end_headers()
+    
+    def send_version(self):
+        """Send server version based on file modification times"""
+        try:
+            # Get modification times of key files to create a version hash
+            key_files = [
+                'index.html',
+                'server.py',
+                'js/app.js',
+                'js/config.js'
+            ]
+            
+            # Also check for any JS/CSS files that might have changed
+            js_files = glob.glob('js/**/*.js', recursive=True)
+            css_files = glob.glob('css/**/*.css', recursive=True)
+            key_files.extend(js_files[:10])  # Limit to avoid too many files
+            key_files.extend(css_files[:10])
+            
+            version_parts = []
+            for file_path in key_files:
+                if os.path.exists(file_path):
+                    mtime = os.path.getmtime(file_path)
+                    version_parts.append(f"{file_path}:{mtime}")
+            
+            # Create a hash of all modification times
+            version_string = '|'.join(sorted(version_parts))
+            version_hash = hashlib.md5(version_string.encode()).hexdigest()[:12]
+            
+            response = {
+                "version": version_hash,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode())
+        except Exception as e:
+            print(f"Error getting version: {e}")
+            self.send_response(500)
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
     
     def proxy_calendar(self):
         """Proxy ICS calendar feed requests (avoid CORS issues)"""

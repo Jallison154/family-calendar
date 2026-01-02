@@ -4,7 +4,7 @@
 
 /* Clock Widget */
 .widget-clock {
-  grid-column: span 4;
+  grid-column: span 6;
   grid-row: span 1;
   background: transparent !important;
   backdrop-filter: none !important;
@@ -42,7 +42,7 @@
 
 /* Weather Widget */
 .widget-weather {
-  grid-column: span 4;
+  grid-column: span 6;
   grid-row: span 1;
   background: transparent !important;
   backdrop-filter: none !important;
@@ -140,8 +140,8 @@
 
 /* Calendar Widget */
 .widget-calendar {
-  grid-column: span 6;
-  grid-row: span 7;
+  grid-column: span 12;
+  grid-row: span 4;
 }
 
 .calendar-grid {
@@ -209,8 +209,8 @@
 
 /* Home Assistant Widget */
 .widget-homeassistant {
-  grid-column: span 3;
-  grid-row: span 1;
+  grid-column: span 6;
+  grid-row: span 2;
 }
 
 .widget-homeassistant .entity-grid {
@@ -363,8 +363,8 @@
 
 /* Dad Joke Widget */
 .widget-dadjoke {
-  grid-column: span 3;
-  grid-row: span 1;
+  grid-column: span 6;
+  grid-row: span 2;
 }
 
 .joke-content {

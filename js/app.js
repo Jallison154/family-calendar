@@ -12,6 +12,7 @@ class DashboardApp {
     this.visitorMode = false;
     this.unsplashSlideshow = null;
     this.lastServerConfigHash = null; // Store hash of last server config for comparison
+    this.lastServerVersion = null; // Store last server version for update detection
   }
 
   async init() {
@@ -72,6 +73,9 @@ class DashboardApp {
       }
     }
     
+    // Check for server version changes (code updates)
+    this.checkServerVersion();
+    
     setInterval(async () => {
       if (typeof window.settingsAPI !== 'undefined') {
         try {
@@ -91,7 +95,35 @@ class DashboardApp {
       }
     }, 30000);
     
+    // Check for server version changes every 30 seconds
+    setInterval(() => this.checkServerVersion(), 30000);
+    
     console.log('✅ Dashboard initialized');
+  }
+
+  async checkServerVersion() {
+    // Check for server version changes and reload if updated
+    try {
+      const response = await fetch('/api/version');
+      if (!response.ok) {
+        return; // Silently fail if endpoint doesn't exist or error
+      }
+      const data = await response.json();
+      const currentVersion = data.version;
+      
+      if (this.lastServerVersion === null) {
+        // First check - just store the version
+        this.lastServerVersion = currentVersion;
+        console.log('📌 Server version:', currentVersion);
+      } else if (this.lastServerVersion !== currentVersion) {
+        // Version changed - reload the page
+        console.log('🔄 Server code updated, reloading page...');
+        console.log(`   Previous: ${this.lastServerVersion} → New: ${currentVersion}`);
+        location.reload();
+      }
+    } catch (e) {
+      // Silently fail - version endpoint might not be available or network issue
+    }
   }
 
   createWidgets(layout) {
