@@ -176,12 +176,12 @@ class GoogleCalendarClient {
           let start = new Date(currentEvent.start);
           let end = new Date(currentEvent.end);
           
-          // Detect all-day events more robustly
-          // This handles cases where events are created "with no time" but exported with timestamps
+          // Detect all-day events - ONLY mark as all-day if explicitly VALUE=DATE format
+          // Events with any time component (even if start/end are the same) should show their time
           if (!currentEvent.isAllDay) {
-            // Check if both DTSTART and DTEND use VALUE=DATE (even if not caught earlier)
-            if ((currentEvent._dtstartParams?.VALUE === 'DATE' || (currentEvent._dtstartValue && currentEvent._dtstartValue.length === 8 && !currentEvent._dtstartValue.includes('T'))) &&
-                (currentEvent._dtendParams?.VALUE === 'DATE' || (currentEvent._dtendValue && currentEvent._dtendValue.length === 8 && !currentEvent._dtendValue.includes('T')))) {
+            // Only mark as all-day if BOTH DTSTART and DTEND use VALUE=DATE format
+            // This is the only true indication of an all-day event
+            if (currentEvent._dtstartParams?.VALUE === 'DATE' && currentEvent._dtendParams?.VALUE === 'DATE') {
               currentEvent.isAllDay = true;
               // Normalize dates
               const startDate = new Date(start);
@@ -192,33 +192,9 @@ class GoogleCalendarClient {
               start = startDate;
               end = currentEvent.end;
               console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
-            } else {
-              // Check if start and end are on the same calendar date AND both at midnight
-              // Only mark as all-day if BOTH conditions are true (true all-day events)
-              const startDate = new Date(start);
-              startDate.setHours(0, 0, 0, 0);
-              const endDate = new Date(end);
-              endDate.setHours(0, 0, 0, 0);
-              
-              // Only mark as all-day if:
-              // 1. Start and end are on the same calendar date AND
-              // 2. Both times are at midnight (00:00:00)
-              // This ensures events with specific times (like 2:00PM-2:00PM) are NOT marked as all-day
-              const isSameDate = startDate.getTime() === endDate.getTime();
-              const isMidnightStart = start.getHours() === 0 && start.getMinutes() === 0 && start.getSeconds() === 0;
-              const isMidnightEnd = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
-              
-              if (isSameDate && isMidnightStart && isMidnightEnd) {
-                currentEvent.isAllDay = true;
-                // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
-                currentEvent.start = startDate;
-                currentEvent.end = new Date(startDate);
-                currentEvent.end.setDate(currentEvent.end.getDate() + 1);
-                start = startDate;
-                end = currentEvent.end;
-                console.log('📅 Detected all-day event (same date/midnight):', currentEvent.title || 'Untitled', 'start:', start.toISOString(), 'end:', end.toISOString());
-              }
             }
+            // Do NOT mark as all-day for events with timestamps, even if they're at midnight
+            // Events with times should always display their start time
           }
           
           // Clean up temporary properties
@@ -272,15 +248,17 @@ class GoogleCalendarClient {
     
     if (baseKey.startsWith('DTSTART')) {
       currentEvent.start = this.parseIcsDate(value, paramMap);
-      // Check if it's an all-day event: VALUE=DATE parameter or no time component (8 digits)
-      currentEvent.isAllDay = paramMap.VALUE === 'DATE' || (!baseKey.includes('T') && value.length === 8);
+      // Only mark as all-day if explicitly VALUE=DATE format (don't guess based on format)
+      // We'll do proper validation in END:VEVENT handler
+      currentEvent.isAllDay = paramMap.VALUE === 'DATE';
       // Store the original value for later validation
       currentEvent._dtstartValue = value;
       currentEvent._dtstartParams = paramMap;
     } else if (baseKey.startsWith('DTEND')) {
       currentEvent.end = this.parseIcsDate(value, paramMap);
-      // Update isAllDay flag: if DTEND is also DATE format, it's definitely all-day
-      if (paramMap.VALUE === 'DATE' || (!baseKey.includes('T') && !value.includes('T') && value.length === 8)) {
+      // Only mark as all-day if explicitly VALUE=DATE format
+      // We'll do proper validation in END:VEVENT handler
+      if (paramMap.VALUE === 'DATE') {
         currentEvent.isAllDay = true;
       }
       // Store the original value for later validation
