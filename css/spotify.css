@@ -24,8 +24,8 @@
 
 .spotify-artwork {
   position: relative;
-  width: 400px;
-  height: 400px;
+  width: 350px;
+  height: 350px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
