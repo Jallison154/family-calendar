@@ -60,7 +60,7 @@ const CONFIG = {
       {
         id: 'clock',
         type: 'clock',
-        gridColumn: '9 / 13',
+        gridColumn: '8 / 13',
         gridRow: '1 / 2'
       },
       {

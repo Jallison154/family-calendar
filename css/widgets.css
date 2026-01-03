@@ -4,7 +4,7 @@
 
 /* Clock Widget */
 .widget-clock {
-  grid-column: span 4;
+  grid-column: span 5;
   grid-row: span 1;
   background: transparent !important;
   backdrop-filter: none !important;
