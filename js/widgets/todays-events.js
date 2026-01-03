@@ -106,7 +106,6 @@ class TodaysEventsWidget extends BaseWidget {
       const color = event.color || '#3b82f6';
       const title = Helpers.escapeHtml(event.title || 'Untitled Event');
       const location = event.location ? Helpers.escapeHtml(event.location) : null;
-      const description = event.description ? Helpers.escapeHtml(event.description) : null;
 
       html += `
         <div class="todays-event-item ${isNow ? 'is-now' : ''} ${isPast ? 'is-past' : ''}" style="--event-color: ${color}">
@@ -117,7 +116,6 @@ class TodaysEventsWidget extends BaseWidget {
           <div class="todays-event-content">
             <div class="todays-event-title">${title}</div>
             ${location ? `<div class="todays-event-location">📍 ${location}</div>` : ''}
-            ${description ? `<div class="todays-event-description">${description}</div>` : ''}
           </div>
           ${isNow ? '<div class="todays-event-now-badge">NOW</div>' : ''}
         </div>
