@@ -144,6 +144,10 @@
   grid-row: span 8;
 }
 
+.widget-calendar .widget-body {
+  padding-top: 100px;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -198,7 +202,7 @@
   padding: 0.5rem;
   background: var(--event-color, var(--color-accent));
   border-radius: 6px;
-  font-size: 0.4375rem;
+  font-size: 0.5625rem;
   color: white; /* Default, will be overridden by inline style if light color */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Default, will be overridden by inline style if light color */
   overflow: hidden;

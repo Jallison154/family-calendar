@@ -193,21 +193,22 @@ class GoogleCalendarClient {
               end = currentEvent.end;
               console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
             } else {
-              // Check if start and end are on the same calendar date (ignoring time)
+              // Check if start and end are on the same calendar date AND both at midnight
+              // Only mark as all-day if BOTH conditions are true (true all-day events)
               const startDate = new Date(start);
               startDate.setHours(0, 0, 0, 0);
               const endDate = new Date(end);
               endDate.setHours(0, 0, 0, 0);
               
-              // If start and end are the same date, treat as all-day event
-              // Also check if times are identical (within 1 second)
-              // OR if the end is exactly 1 day after start (common for all-day events)
-              const timeDiff = Math.abs(end.getTime() - start.getTime());
-              const oneDayMs = 24 * 60 * 60 * 1000;
+              // Only mark as all-day if:
+              // 1. Start and end are on the same calendar date AND
+              // 2. Both times are at midnight (00:00:00)
+              // This ensures events with specific times (like 2:00PM-2:00PM) are NOT marked as all-day
+              const isSameDate = startDate.getTime() === endDate.getTime();
+              const isMidnightStart = start.getHours() === 0 && start.getMinutes() === 0 && start.getSeconds() === 0;
+              const isMidnightEnd = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
               
-              if (startDate.getTime() === endDate.getTime() || 
-                  timeDiff < 1000 || 
-                  (Math.abs(timeDiff - oneDayMs) < 1000 && start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 0 && end.getMinutes() === 0)) {
+              if (isSameDate && isMidnightStart && isMidnightEnd) {
                 currentEvent.isAllDay = true;
                 // Normalize to start of day for consistency (ICS format: end date is exclusive, next day)
                 currentEvent.start = startDate;

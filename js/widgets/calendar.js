@@ -259,9 +259,9 @@ class CalendarWidget extends BaseWidget {
   renderDayEvents(events) {
     if (events.length === 0) return '';
     
-    // Limit to 3 visible events, show "X more" if needed
-    const visible = events.slice(0, 3);
-    const more = events.length - 3;
+    // Limit to 5 visible events, show "X more" if needed
+    const visible = events.slice(0, 5);
+    const more = events.length - 5;
     
     return visible.map(event => {
       const color = event.color || '#3b82f6';
@@ -272,7 +272,7 @@ class CalendarWidget extends BaseWidget {
       const time = event.isAllDay ? '' : Helpers.formatTime(new Date(event.start), false);
       return `
         <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
-          ${time ? `<span style="font-size: 0.375rem; opacity: 0.8;">${time}</span> ` : ''}
+          ${time ? `<span style="font-size: 0.5rem; opacity: 0.8;">${time}</span> ` : ''}
           <span>${title}</span>
         </div>
       `;
