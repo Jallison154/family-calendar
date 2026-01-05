@@ -413,20 +413,49 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # Check if it's an MJPEG stream (for better handling)
             is_mjpeg = '/mjpg/' in url or '/mjpeg/' in url or 'video.cgi' in url or url.endswith('.mjpg') or url.endswith('.mjpeg')
             
-            # Fetch the stream
-            req = urllib.request.Request(url, headers={
+            # Parse URL to handle embedded credentials
+            parsed_url = urlparse(url)
+            headers = {
                 'User-Agent': 'Mozilla/5.0 (Family Calendar Camera Proxy)',
                 'Accept': '*/*'
-            })
+            }
+            
+            # Build URL without credentials in netloc
+            clean_netloc = parsed_url.netloc
+            username = None
+            password = None
+            
+            if '@' in parsed_url.netloc:
+                # Extract credentials
+                auth_part, clean_netloc = parsed_url.netloc.rsplit('@', 1)
+                if ':' in auth_part:
+                    username, password = auth_part.split(':', 1)
+            
+            clean_url = f"{parsed_url.scheme}://{clean_netloc}{parsed_url.path}"
+            if parsed_url.query:
+                clean_url += '?' + parsed_url.query
+            
+            # Create request
+            req = urllib.request.Request(clean_url, headers=headers)
+            
+            # Set up authentication if credentials were found
+            opener = urllib.request.build_opener()
+            if username and password:
+                password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+                password_mgr.add_password(None, f"{parsed_url.scheme}://{clean_netloc}", username, password)
+                auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+                opener = urllib.request.build_opener(auth_handler)
             
             try:
-                with urllib.request.urlopen(req, timeout=30) as response:
+                with opener.open(req, timeout=30) as response:
                     # Get content type
                     content_type = response.headers.get('Content-Type', 'video/mp4')
                     
                     # For HLS streams, set appropriate headers
                     if '.m3u8' in url or content_type == 'application/vnd.apple.mpegurl':
                         content_type = 'application/vnd.apple.mpegurl'
+                    elif is_mjpeg or 'mjpeg' in content_type.lower() or 'multipart/x-mixed-replace' in content_type.lower():
+                        content_type = 'multipart/x-mixed-replace'
                     
                     # Send headers for video streaming
                     self.send_response(200)
@@ -436,15 +465,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self.send_header('Pragma', 'no-cache')
                     self.send_header('Expires', '0')
                     
-                    # For video streams, don't send Content-Length (it's a stream)
-                    if 'video' in content_type or 'application/vnd.apple.mpegurl' in content_type:
+                    # For video/MJPEG streams, don't send Content-Length (it's a stream)
+                    if 'video' in content_type or 'application/vnd.apple.mpegurl' in content_type or 'multipart' in content_type:
                         # Stream the data in chunks
                         chunk_size = 8192
-                        while True:
-                            chunk = response.read(chunk_size)
-                            if not chunk:
-                                break
-                            self.wfile.write(chunk)
+                        try:
+                            while True:
+                                chunk = response.read(chunk_size)
+                                if not chunk:
+                                    break
+                                self.wfile.write(chunk)
+                        except (ConnectionResetError, BrokenPipeError):
+                            # Client disconnected, that's fine
+                            pass
                     else:
                         # For other content, read all at once
                         data = response.read()
