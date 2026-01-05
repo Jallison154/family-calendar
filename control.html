@@ -511,15 +511,21 @@
           <strong>Camera Feeds (RTSP/ONVIF/MJPEG/HLS/Scrypted)</strong><br>
           Various camera streaming methods are supported:
           <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
-            <li><strong>Scrypted HLS Rebroadcast</strong> (recommended, no auth): <code>https://scrypted-ip:10443/endpoint/@scrypted/rebroadcast/hls/26</code></li>
-            <li><strong>Scrypted WebRTC</strong> (low latency, may need auth): <code>https://scrypted-ip:10443/webrtc/camera-name</code></li>
-            <li><strong>Scrypted Public Page</strong> (requires authentication): <code>https://scrypted-ip:10443/endpoint/@scrypted/core/public/#/device/26</code></li>
-            <li><strong>MJPEG</strong> (works everywhere): <code>http://camera-ip/mjpg/video.mjpg</code> or <code>http://camera-ip/video.cgi</code></li>
+            <li><strong>Scrypted HLS Rebroadcast</strong> (if rebroadcast plugin installed): <code>https://scrypted-ip:10443/endpoint/@scrypted/rebroadcast/hls/{device-id}</code><br>
+            <small>If you get 404, the rebroadcast plugin may not be installed. Install "Rebroadcast" plugin in Scrypted.</small></li>
+            <li><strong>Scrypted WebRTC</strong> (low latency): <code>https://scrypted-ip:10443/endpoint/@scrypted/webrtc/webrtc.html?id={device-id}</code></li>
+            <li><strong>Scrypted Public Page</strong> (iframe, may require auth): <code>https://scrypted-ip:10443/endpoint/@scrypted/core/public/#/device/{device-id}</code></li>
+            <li><strong>Direct Camera MJPEG</strong> (most reliable): <code>http://camera-ip/mjpg/video.mjpg</code> or <code>http://camera-ip/video.cgi</code></li>
             <li><strong>HLS</strong>: <code>http://camera-ip/stream.m3u8</code></li>
             <li><strong>Snapshots</strong>: <code>http://camera-ip/snapshot.cgi</code></li>
             <li><strong>RTSP</strong>: Requires server-side conversion to HLS (needs ffmpeg)</li>
           </ul>
-          <strong>Note:</strong> If you see "Not logged in" errors with Scrypted public pages, use the HLS rebroadcast URL instead.
+          <strong>Troubleshooting:</strong>
+          <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+            <li>If Scrypted rebroadcast returns 404: Install the "Rebroadcast" plugin in Scrypted, or use the camera's direct MJPEG URL instead</li>
+            <li>If Scrypted public page shows "Not logged in": Use WebRTC endpoint or direct camera MJPEG URL</li>
+            <li>For best compatibility: Use your camera's direct MJPEG endpoint if available</li>
+          </ul>
         </p>
         <div class="form-group">
           <label class="form-checkbox">

@@ -228,6 +228,15 @@ class CameraWidget extends BaseWidget {
           console.error(`Camera feed error (${camera.name || camera.url}):`, e);
           if (errorEl) {
             errorEl.style.display = 'flex';
+            // Provide helpful error message for common issues
+            const url = camera.url || '';
+            if (url.includes('/rebroadcast/hls/') || url.includes('404')) {
+              errorEl.querySelector('.camera-error-text').textContent = 'Rebroadcast plugin not installed or URL incorrect. Try using camera\'s direct MJPEG URL.';
+            } else if (url.includes('@scrypted')) {
+              errorEl.querySelector('.camera-error-text').textContent = 'Scrypted endpoint error. Check device ID and plugin configuration.';
+            } else {
+              errorEl.querySelector('.camera-error-text').textContent = 'Unable to load feed. Check URL and network connection.';
+            }
           }
           if (video) {
             video.style.display = 'none';
