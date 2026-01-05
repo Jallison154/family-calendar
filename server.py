@@ -14,6 +14,7 @@ import urllib.request
 import urllib.error
 import hashlib
 import glob
+import traceback
 
 SETTINGS_FILE = 'settings.json'
 SETTINGS_LOCK = threading.Lock()
@@ -431,9 +432,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 if ':' in auth_part:
                     username, password = auth_part.split(':', 1)
             
+            # Build clean URL
             clean_url = f"{parsed_url.scheme}://{clean_netloc}{parsed_url.path}"
             if parsed_url.query:
                 clean_url += '?' + parsed_url.query
+            if parsed_url.fragment:
+                clean_url += '#' + parsed_url.fragment
             
             # Create request
             req = urllib.request.Request(clean_url, headers=headers)
@@ -511,12 +515,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
                 
         except Exception as e:
+            error_traceback = traceback.format_exc()
             print(f"Camera proxy unexpected error: {e}")
-            self.send_response(500)
-            self.send_cors_headers()
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
+            print(f"Traceback:\n{error_traceback}")
+            try:
+                self.send_response(500)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                # Only send error message, not full traceback to client (security)
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+            except Exception:
+                # If we can't send error response, just log it
+                pass
     
     def _stream_camera_response(self, response, is_mjpeg, original_url):
         """Helper method to stream camera response"""
