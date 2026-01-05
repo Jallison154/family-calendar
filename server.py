@@ -365,7 +365,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": str(e)}).encode())
     
     def proxy_camera(self):
-        """Proxy camera stream requests (RTSP, HLS, or HTTP streams)"""
+        """Proxy camera stream requests (RTSP, HLS, MJPEG, or HTTP streams)"""
         try:
             parsed_path = urlparse(self.path)
             query_params = parse_qs(parsed_path.query)
@@ -384,7 +384,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             
             # Check if it's an RTSP URL - note: browsers can't play RTSP directly
             # For RTSP, you would need ffmpeg to convert to HLS or WebRTC
-            # For now, we'll just proxy HTTP/HLS streams
+            # For now, we'll just proxy HTTP/HLS/MJPEG streams
             if url.startswith('rtsp://'):
                 # RTSP streams need server-side conversion to HLS
                 # This is a placeholder - you would need ffmpeg running on the server
@@ -401,7 +401,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(error_msg).encode())
                 return
             
-            # For HTTP/HLS streams, proxy the request
+            # For HTTP/HLS/MJPEG streams, proxy the request
             # Validate URL is HTTP/HTTPS
             if not (url.startswith('http://') or url.startswith('https://')):
                 self.send_response(400)
@@ -409,6 +409,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Only HTTP/HTTPS URLs are supported"}).encode())
                 return
+            
+            # Check if it's an MJPEG stream (for better handling)
+            is_mjpeg = '/mjpg/' in url or '/mjpeg/' in url or 'video.cgi' in url or url.endswith('.mjpg') or url.endswith('.mjpeg')
             
             # Fetch the stream
             req = urllib.request.Request(url, headers={
@@ -479,6 +482,45 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
+    
+    def _stream_camera_response(self, response, is_mjpeg, original_url):
+        """Helper method to stream camera response"""
+        # Get content type
+        content_type = response.headers.get('Content-Type', 'video/mp4')
+        
+        # For HLS streams, set appropriate headers
+        if '.m3u8' in original_url or content_type == 'application/vnd.apple.mpegurl':
+            content_type = 'application/vnd.apple.mpegurl'
+        elif is_mjpeg or 'mjpeg' in content_type.lower() or 'multipart/x-mixed-replace' in content_type.lower():
+            content_type = 'multipart/x-mixed-replace; boundary=--BoundaryString'
+        
+        # Send headers for video streaming
+        self.send_response(200)
+        self.send_cors_headers()
+        self.send_header('Content-Type', content_type)
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        
+        # For video/MJPEG streams, don't send Content-Length (it's a stream)
+        if 'video' in content_type or 'application/vnd.apple.mpegurl' in content_type or 'multipart' in content_type:
+            # Stream the data in chunks
+            chunk_size = 8192
+            try:
+                while True:
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+            except (ConnectionResetError, BrokenPipeError):
+                # Client disconnected, that's fine
+                pass
+        else:
+            # For other content, read all at once
+            data = response.read()
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
     
     def log_message(self, format, *args):
         """Override to use print instead of stderr"""

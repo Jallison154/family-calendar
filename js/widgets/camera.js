@@ -189,13 +189,22 @@ class CameraWidget extends BaseWidget {
       return originalUrl;
     }
     
-    // If it's MJPEG or snapshot, use it directly (browsers can play these)
+    // If it's MJPEG or snapshot, check if credentials are embedded
     if (isMjpeg || originalUrl.includes('/snapshot')) {
+      // URLs with embedded credentials (user:pass@host) can have issues in browsers
+      // Proxy through server for better reliability with credentials and special characters
+      if (originalUrl.includes('@') && !originalUrl.includes('@scrypted')) {
+        // Has embedded credentials, proxy through server for better handling
+        return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+      }
+      // No credentials or already proxied, use directly
       return originalUrl;
     }
     
-    // For other HTTP/HTTPS streams, proxy through server (handles CORS, etc.)
+    // For other HTTP/HTTPS streams, proxy through server (handles CORS, credentials, etc.)
+    // This is especially useful for MJPEG streams with credentials that might have CORS issues
     if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
+      // Proxy through server to handle credentials and CORS better
       return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
     } 
     
@@ -320,12 +329,56 @@ class CameraWidget extends BaseWidget {
         // MJPEG streams auto-refresh, so no interval needed
         // But ensure they keep loading if paused
         else if (image && !isSnapshot) {
-          image.addEventListener('error', () => {
-            // Retry on error
-            setTimeout(() => {
-              const currentSrc = image.src;
-              image.src = currentSrc.split('?')[0] + '?t=' + Date.now();
-            }, 2000);
+          let retryCount = 0;
+          const maxRetries = 3;
+          let retryTimeout = null;
+          
+          const handleMjpegError = () => {
+            retryCount++;
+            
+            if (retryCount > maxRetries) {
+              console.error(`Camera MJPEG stream failed after ${maxRetries} retries: ${camera.name || camera.url}`);
+              if (errorEl) {
+                errorEl.style.display = 'flex';
+                errorEl.querySelector('.camera-error-text').textContent = 'Stream connection failed. Check camera URL and credentials.';
+              }
+              // Stop retrying
+              return;
+            }
+            
+            // Clear any existing timeout
+            if (retryTimeout) {
+              clearTimeout(retryTimeout);
+            }
+            
+            // Exponential backoff: 2s, 4s, 8s
+            const delay = Math.min(2000 * Math.pow(2, retryCount - 1), 10000);
+            
+            retryTimeout = setTimeout(() => {
+              if (image && image.style.display !== 'none') {
+                const currentSrc = image.src;
+                // Preserve query parameters when adding timestamp
+                const [base, query] = currentSrc.split('?');
+                const timestamp = 't=' + Date.now();
+                const newQuery = query ? query + '&' + timestamp : timestamp;
+                image.src = base + '?' + newQuery;
+                
+                // Reset retry count on successful load
+                image.addEventListener('load', () => {
+                  retryCount = 0;
+                }, { once: true });
+              }
+            }, delay);
+          };
+          
+          image.addEventListener('error', handleMjpegError);
+          
+          // Also handle successful loads to reset retry count
+          image.addEventListener('load', () => {
+            retryCount = 0;
+            if (errorEl) {
+              errorEl.style.display = 'none';
+            }
           });
         }
       } else if (isIframe) {
