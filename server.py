@@ -467,6 +467,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     
                     # For video/MJPEG streams, don't send Content-Length (it's a stream)
                     if 'video' in content_type or 'application/vnd.apple.mpegurl' in content_type or 'multipart' in content_type:
+                        # End headers before streaming
+                        self.end_headers()
                         # Stream the data in chunks
                         chunk_size = 8192
                         try:
