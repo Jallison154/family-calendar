@@ -47,7 +47,10 @@ class CameraWidget extends BaseWidget {
       // Scrypted WebRTC streams use iframe embedding
       const streamUrl = this.getStreamUrl(camera.url);
       const isScrypted = streamUrl.includes('@scrypted') || 
-                         streamUrl.includes('/endpoint/@scrypted/');
+                         streamUrl.includes('/endpoint/@scrypted/') ||
+                         streamUrl.includes('/webrtc/');
+      const isScryptedHls = streamUrl.includes('/rebroadcast/hls/') ||
+                            (isScrypted && (streamUrl.includes('.m3u8') || camera.url.includes('.m3u8')));
       const isHls = streamUrl.includes('.m3u8') || camera.url.includes('.m3u8');
       const isMjpeg = streamUrl.includes('/mjpg/') || 
                       streamUrl.includes('/mjpeg/') || 
@@ -60,8 +63,22 @@ class CameraWidget extends BaseWidget {
         <div class="camera-feed-wrapper">
           ${camera.name ? `<div class="camera-feed-name">${this.escapeHtml(camera.name)}</div>` : ''}
           <div class="camera-feed-container">
-            ${isScrypted ? `
-            <!-- Scrypted WebRTC stream - embed via iframe -->
+            ${isScryptedHls ? `
+            <!-- Scrypted HLS rebroadcast - works without authentication -->
+            <video
+              id="${cameraId}"
+              class="camera-feed-video"
+              autoplay
+              muted
+              playsinline
+              preload="auto"
+              controls
+            >
+              <source src="${streamUrl}" type="application/vnd.apple.mpegurl">
+              Your browser does not support HLS video.
+            </video>
+            ` : isScrypted ? `
+            <!-- Scrypted WebRTC/public page - embed via iframe (may require auth) -->
             <iframe
               id="${cameraId}"
               class="camera-feed-iframe"
@@ -136,11 +153,20 @@ class CameraWidget extends BaseWidget {
     // 2. MJPEG over HTTP (http://.../video.cgi or /mjpg/video.mjpg) - works directly in browsers!
     // 3. HLS streams (http://.../stream.m3u8) - works directly in browsers
     // 4. Snapshot endpoints (http://.../snapshot.cgi) - works directly as images
-    // 5. Scrypted WebRTC (https://.../endpoint/@scrypted/...) - use iframe embedding
+    // 5. Scrypted WebRTC/HLS (various endpoints) - use iframe or video embedding
     
-    // Check if it's a Scrypted URL (should be embedded in iframe)
+    // Check if it's a Scrypted URL
+    // Scrypted provides several endpoints:
+    // - Public device page: /endpoint/@scrypted/core/public/#/device/{id} (requires auth)
+    // - WebRTC endpoint: /webrtc/{camera-name} (may work without auth)
+    // - HLS rebroadcast: /endpoint/@scrypted/rebroadcast/hls/{id} (no auth needed)
     const isScrypted = originalUrl.includes('@scrypted') || 
-                       originalUrl.includes('/endpoint/@scrypted/');
+                       originalUrl.includes('/endpoint/@scrypted/') ||
+                       originalUrl.includes('/webrtc/');
+    
+    // Scrypted HLS rebroadcast works better than public page (no auth needed)
+    const isScryptedHls = originalUrl.includes('/rebroadcast/hls/') ||
+                          (isScrypted && originalUrl.includes('.m3u8'));
     
     // Check if it's an MJPEG stream (works directly in browsers)
     const isMjpeg = originalUrl.includes('/mjpg/') || 
@@ -149,7 +175,13 @@ class CameraWidget extends BaseWidget {
                     originalUrl.includes('.mjpg') ||
                     originalUrl.includes('.mjpeg');
     
-    // If it's Scrypted, return as-is (will be embedded in iframe)
+    // Scrypted HLS rebroadcast - use video element (no auth, better performance)
+    if (isScryptedHls) {
+      return originalUrl;
+    }
+    
+    // Scrypted public page or WebRTC endpoint - use iframe (may require auth)
+    // Note: Public pages often require authentication. Consider using HLS rebroadcast instead.
     if (isScrypted) {
       return originalUrl;
     }

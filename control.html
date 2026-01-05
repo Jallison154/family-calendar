@@ -511,12 +511,15 @@
           <strong>Camera Feeds (RTSP/ONVIF/MJPEG/HLS/Scrypted)</strong><br>
           Various camera streaming methods are supported:
           <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
-            <li><strong>Scrypted WebRTC</strong> (low latency): Use Scrypted's public device page. URL format: <code>https://scrypted-ip:10443/endpoint/@scrypted/core/public/#/device/26</code></li>
-            <li><strong>MJPEG</strong> (recommended): Works directly in browsers. URL format: <code>http://camera-ip/mjpg/video.mjpg</code> or <code>http://camera-ip/video.cgi</code></li>
-            <li><strong>HLS</strong>: Works in modern browsers. URL format: <code>http://camera-ip/stream.m3u8</code></li>
-            <li><strong>Snapshots</strong>: Periodic image refresh. URL format: <code>http://camera-ip/snapshot.cgi</code></li>
-            <li><strong>RTSP</strong>: Requires server-side conversion to HLS (needs ffmpeg on server)</li>
+            <li><strong>Scrypted HLS Rebroadcast</strong> (recommended, no auth): <code>https://scrypted-ip:10443/endpoint/@scrypted/rebroadcast/hls/26</code></li>
+            <li><strong>Scrypted WebRTC</strong> (low latency, may need auth): <code>https://scrypted-ip:10443/webrtc/camera-name</code></li>
+            <li><strong>Scrypted Public Page</strong> (requires authentication): <code>https://scrypted-ip:10443/endpoint/@scrypted/core/public/#/device/26</code></li>
+            <li><strong>MJPEG</strong> (works everywhere): <code>http://camera-ip/mjpg/video.mjpg</code> or <code>http://camera-ip/video.cgi</code></li>
+            <li><strong>HLS</strong>: <code>http://camera-ip/stream.m3u8</code></li>
+            <li><strong>Snapshots</strong>: <code>http://camera-ip/snapshot.cgi</code></li>
+            <li><strong>RTSP</strong>: Requires server-side conversion to HLS (needs ffmpeg)</li>
           </ul>
+          <strong>Note:</strong> If you see "Not logged in" errors with Scrypted public pages, use the HLS rebroadcast URL instead.
         </p>
         <div id="camera-feeds"></div>
         <button class="add-btn" onclick="addCameraFeed()">+ Add Camera Feed</button>
