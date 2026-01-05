@@ -1,0 +1,315 @@
+/**
+ * Camera Feed Widget (RTSP/HLS/WebRTC streams)
+ */
+
+class CameraWidget extends BaseWidget {
+  constructor(config = {}) {
+    super(config);
+    this.type = 'camera';
+    this.cameras = config.cameras || window.CONFIG?.cameras?.feeds || [];
+    this.updateInterval = null;
+  }
+
+  getHTML() {
+    return `
+      <div class="widget-body" id="${this.id}-body">
+        <div class="camera-feeds-container" id="${this.id}-container">
+          ${this.cameras.length === 0 ? '<div class="camera-empty">No camera feeds configured</div>' : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  onInit() {
+    this.render();
+  }
+
+  render() {
+    const container = this.element.querySelector(`#${this.id}-container`);
+    if (!container) return;
+
+    if (this.cameras.length === 0) {
+      container.innerHTML = '<div class="camera-empty">No camera feeds configured</div>';
+      return;
+    }
+
+    let html = '<div class="camera-feeds-grid">';
+    
+    this.cameras.forEach((camera, index) => {
+      if (!camera.url || !camera.url.trim()) return;
+      
+      const cameraId = `camera-${this.id}-${index}`;
+      
+      // Use server proxy for RTSP/HTTP streams
+      // For RTSP, this will return an error message (need ffmpeg conversion)
+      // For HTTP/HLS, this will proxy the stream
+      // MJPEG streams work directly in browsers
+      // Scrypted WebRTC streams use iframe embedding
+      const streamUrl = this.getStreamUrl(camera.url);
+      const isScrypted = streamUrl.includes('@scrypted') || 
+                         streamUrl.includes('/endpoint/@scrypted/');
+      const isHls = streamUrl.includes('.m3u8') || camera.url.includes('.m3u8');
+      const isMjpeg = streamUrl.includes('/mjpg/') || 
+                      streamUrl.includes('/mjpeg/') || 
+                      streamUrl.includes('video.cgi') ||
+                      streamUrl.includes('.mjpg') ||
+                      streamUrl.includes('.mjpeg');
+      const isSnapshot = streamUrl.includes('/snapshot');
+      
+      html += `
+        <div class="camera-feed-wrapper">
+          ${camera.name ? `<div class="camera-feed-name">${this.escapeHtml(camera.name)}</div>` : ''}
+          <div class="camera-feed-container">
+            ${isScrypted ? `
+            <!-- Scrypted WebRTC stream - embed via iframe -->
+            <iframe
+              id="${cameraId}"
+              class="camera-feed-iframe"
+              src="${streamUrl}"
+              allow="autoplay; fullscreen"
+              allowfullscreen
+              frameborder="0"
+            ></iframe>
+            ` : isSnapshot ? `
+            <!-- Snapshot endpoint - refresh periodically -->
+            <img
+              id="${cameraId}"
+              class="camera-feed-image"
+              src="${streamUrl}"
+              alt="${this.escapeHtml(camera.name || 'Camera')}"
+            />
+            ` : isHls ? `
+            <!-- HLS stream -->
+            <video
+              id="${cameraId}"
+              class="camera-feed-video"
+              autoplay
+              muted
+              playsinline
+              preload="auto"
+              controls
+            >
+              <source src="${streamUrl}" type="application/vnd.apple.mpegurl">
+              Your browser does not support HLS video.
+            </video>
+            ` : isMjpeg ? `
+            <!-- MJPEG stream - works directly in browsers! -->
+            <img
+              id="${cameraId}"
+              class="camera-feed-image"
+              src="${streamUrl}"
+              alt="${this.escapeHtml(camera.name || 'Camera')}"
+            />
+            ` : `
+            <!-- Other video stream (MP4, WebM, etc.) -->
+            <video
+              id="${cameraId}"
+              class="camera-feed-video"
+              autoplay
+              muted
+              playsinline
+              preload="auto"
+            >
+              <source src="${streamUrl}">
+              Your browser does not support the video tag.
+            </video>
+            `}
+            <div class="camera-feed-error" id="${cameraId}-error" style="display: none;">
+              <div class="camera-error-icon">⚠️</div>
+              <div class="camera-error-text">Unable to load feed</div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Setup video elements after rendering
+    this.setupVideos();
+  }
+
+  getStreamUrl(originalUrl) {
+    // ONVIF cameras typically provide:
+    // 1. RTSP streams (rtsp://...) - needs server-side conversion
+    // 2. MJPEG over HTTP (http://.../video.cgi or /mjpg/video.mjpg) - works directly in browsers!
+    // 3. HLS streams (http://.../stream.m3u8) - works directly in browsers
+    // 4. Snapshot endpoints (http://.../snapshot.cgi) - works directly as images
+    // 5. Scrypted WebRTC (https://.../endpoint/@scrypted/...) - use iframe embedding
+    
+    // Check if it's a Scrypted URL (should be embedded in iframe)
+    const isScrypted = originalUrl.includes('@scrypted') || 
+                       originalUrl.includes('/endpoint/@scrypted/');
+    
+    // Check if it's an MJPEG stream (works directly in browsers)
+    const isMjpeg = originalUrl.includes('/mjpg/') || 
+                    originalUrl.includes('/mjpeg/') || 
+                    originalUrl.includes('video.cgi') ||
+                    originalUrl.includes('.mjpg') ||
+                    originalUrl.includes('.mjpeg');
+    
+    // If it's Scrypted, return as-is (will be embedded in iframe)
+    if (isScrypted) {
+      return originalUrl;
+    }
+    
+    // If it's MJPEG or snapshot, use it directly (browsers can play these)
+    if (isMjpeg || originalUrl.includes('/snapshot')) {
+      return originalUrl;
+    }
+    
+    // For other HTTP/HTTPS streams, proxy through server (handles CORS, etc.)
+    if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
+      return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+    } 
+    
+    // RTSP needs server-side conversion
+    if (originalUrl.startsWith('rtsp://')) {
+      return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+    }
+    
+    // Assume it needs proxying
+    return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+  }
+
+  setupVideos() {
+    this.cameras.forEach((camera, index) => {
+      const cameraId = `camera-${this.id}-${index}`;
+      const video = this.element.querySelector(`#${cameraId}`);
+      const image = this.element.querySelector(`#${cameraId}`);
+      const iframe = this.element.querySelector(`#${cameraId}`);
+      const errorEl = this.element.querySelector(`#${cameraId}-error`);
+      
+      if (!video && !image && !iframe) return;
+
+      const isImage = image && image.tagName === 'IMG';
+      const isVideo = video && video.tagName === 'VIDEO';
+      const isIframe = iframe && iframe.tagName === 'IFRAME';
+
+      if (isVideo) {
+        // Handle video load errors
+        video.addEventListener('error', (e) => {
+          console.error(`Camera feed error (${camera.name || camera.url}):`, e);
+          if (errorEl) {
+            errorEl.style.display = 'flex';
+          }
+          if (video) {
+            video.style.display = 'none';
+          }
+        });
+
+        // Hide error when video loads successfully
+        video.addEventListener('loadeddata', () => {
+          if (errorEl) {
+            errorEl.style.display = 'none';
+          }
+          if (video) {
+            video.style.display = 'block';
+          }
+        });
+
+        // Try to play the video
+        video.play().catch(err => {
+          console.warn(`Camera feed play error (${camera.name || camera.url}):`, err);
+          // Video might still work, just muted autoplay was blocked
+        });
+      } else if (isImage) {
+        // Handle image load errors (for MJPEG streams and snapshots)
+        image.addEventListener('error', (e) => {
+          console.error(`Camera image error (${camera.name || camera.url}):`, e);
+          if (errorEl) {
+            errorEl.style.display = 'flex';
+          }
+          if (image) {
+            image.style.display = 'none';
+          }
+        });
+
+        // Hide error when image loads successfully
+        image.addEventListener('load', () => {
+          if (errorEl) {
+            errorEl.style.display = 'none';
+          }
+          if (image) {
+            image.style.display = 'block';
+          }
+        });
+
+        // For snapshot endpoints, refresh periodically
+        const isSnapshot = camera.url.includes('/snapshot');
+        if (isSnapshot) {
+          // Refresh snapshot every 2 seconds
+          setInterval(() => {
+            if (image && image.style.display !== 'none') {
+              const currentSrc = image.src;
+              // Add timestamp to bust cache
+              image.src = currentSrc.split('?')[0] + '?t=' + Date.now();
+            }
+          }, 2000);
+        }
+        // MJPEG streams auto-refresh, so no interval needed
+      } else if (isIframe) {
+        // Handle iframe load errors (for Scrypted WebRTC)
+        iframe.addEventListener('error', (e) => {
+          console.error(`Camera iframe error (${camera.name || camera.url}):`, e);
+          if (errorEl) {
+            errorEl.style.display = 'flex';
+          }
+          if (iframe) {
+            iframe.style.display = 'none';
+          }
+        });
+
+        // Hide error when iframe loads successfully
+        iframe.addEventListener('load', () => {
+          if (errorEl) {
+            errorEl.style.display = 'none';
+          }
+          if (iframe) {
+            iframe.style.display = 'block';
+          }
+        });
+      }
+    });
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  update() {
+    // Refresh video sources if needed
+    // This could be used to reconnect streams
+    this.render();
+  }
+
+  destroy() {
+    // Clean up video/iframe elements
+    this.cameras.forEach((camera, index) => {
+      const cameraId = `camera-${this.id}-${index}`;
+      const video = this.element.querySelector(`#${cameraId}`);
+      const iframe = this.element.querySelector(`#${cameraId}`);
+      
+      if (video && video.tagName === 'VIDEO') {
+        video.pause();
+        video.src = '';
+        video.load();
+      }
+      
+      if (iframe && iframe.tagName === 'IFRAME') {
+        // Remove iframe src to stop loading
+        iframe.src = 'about:blank';
+      }
+    });
+    super.destroy();
+  }
+}
+
+// Register widget
+if (typeof window !== 'undefined' && window.widgetRegistry) {
+  window.widgetRegistry.register('camera', CameraWidget);
+}
+

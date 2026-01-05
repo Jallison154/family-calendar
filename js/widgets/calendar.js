@@ -125,6 +125,10 @@ class CalendarWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
+    // Update today's date to current date
+    this.today = new Date();
+    this.today.setHours(0, 0, 0, 0);
+
     const days = this.generateDays();
     const eventsByDate = this.groupEventsByDate();
 

@@ -41,6 +41,11 @@ const CONFIG = {
     mediaPlayerEntity: 'media_player.spotify'
   },
 
+  // Camera Feeds (RTSP/HLS/WebRTC)
+  cameras: {
+    feeds: []
+  },
+
   // Display Settings
   display: {
     use24Hour: false,
@@ -82,16 +87,22 @@ const CONFIG = {
         gridRow: '4 / 12'
       },
       {
+        id: 'camera',
+        type: 'camera',
+        gridColumn: '1 / 13',
+        gridRow: '12 / 13'
+      },
+      {
         id: 'homeassistant',
         type: 'homeassistant',
         gridColumn: '1 / 7',
-        gridRow: '12 / 13'
+        gridRow: '13 / 14'
       },
       {
         id: 'dadjoke',
         type: 'dadjoke',
         gridColumn: '7 / 13',
-        gridRow: '12 / 13'
+        gridRow: '13 / 14'
       }
     ]
   }

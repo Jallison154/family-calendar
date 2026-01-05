@@ -38,6 +38,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.proxy_homeassistant()
             return
         
+        # API endpoint for camera stream proxy
+        if parsed_path.path == '/api/camera':
+            self.proxy_camera()
+            return
+        
         # API endpoint for getting server version
         if parsed_path.path == '/api/version':
             self.send_version()
@@ -356,6 +361,122 @@ class DashboardHandler(BaseHTTPRequestHandler):
             print(f"Calendar proxy unexpected error: {e}")
             self.send_response(500)
             self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
+    
+    def proxy_camera(self):
+        """Proxy camera stream requests (RTSP, HLS, or HTTP streams)"""
+        try:
+            parsed_path = urlparse(self.path)
+            query_params = parse_qs(parsed_path.query)
+            
+            # Get URL from query parameter
+            url = query_params.get('url', [None])[0]
+            if not url:
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Missing 'url' parameter"}).encode())
+                return
+            
+            # Decode URL
+            url = unquote(url)
+            
+            # Check if it's an RTSP URL - note: browsers can't play RTSP directly
+            # For RTSP, you would need ffmpeg to convert to HLS or WebRTC
+            # For now, we'll just proxy HTTP/HLS streams
+            if url.startswith('rtsp://'):
+                # RTSP streams need server-side conversion to HLS
+                # This is a placeholder - you would need ffmpeg running on the server
+                # For now, return an error with instructions
+                self.send_response(501)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                error_msg = {
+                    "error": "RTSP streams require server-side conversion to HLS",
+                    "message": "Please configure your camera to output HLS (.m3u8) or use an RTSP-to-HLS converter service",
+                    "hint": "You can use ffmpeg on the server to convert RTSP to HLS: ffmpeg -i rtsp://... -c copy -f hls -hls_time 2 -hls_list_size 3 stream.m3u8"
+                }
+                self.wfile.write(json.dumps(error_msg).encode())
+                return
+            
+            # For HTTP/HLS streams, proxy the request
+            # Validate URL is HTTP/HTTPS
+            if not (url.startswith('http://') or url.startswith('https://')):
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Only HTTP/HTTPS URLs are supported"}).encode())
+                return
+            
+            # Fetch the stream
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Family Calendar Camera Proxy)',
+                'Accept': '*/*'
+            })
+            
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    # Get content type
+                    content_type = response.headers.get('Content-Type', 'video/mp4')
+                    
+                    # For HLS streams, set appropriate headers
+                    if '.m3u8' in url or content_type == 'application/vnd.apple.mpegurl':
+                        content_type = 'application/vnd.apple.mpegurl'
+                    
+                    # Send headers for video streaming
+                    self.send_response(200)
+                    self.send_cors_headers()
+                    self.send_header('Content-Type', content_type)
+                    self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    self.send_header('Pragma', 'no-cache')
+                    self.send_header('Expires', '0')
+                    
+                    # For video streams, don't send Content-Length (it's a stream)
+                    if 'video' in content_type or 'application/vnd.apple.mpegurl' in content_type:
+                        # Stream the data in chunks
+                        chunk_size = 8192
+                        while True:
+                            chunk = response.read(chunk_size)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                    else:
+                        # For other content, read all at once
+                        data = response.read()
+                        self.send_header('Content-Length', str(len(data)))
+                        self.end_headers()
+                        self.wfile.write(data)
+                        
+            except urllib.error.HTTPError as e:
+                print(f"Camera proxy HTTP error: {e.code} {e.reason}")
+                error_body = e.read()
+                self.send_response(e.code)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"HTTP {e.code}: {e.reason}"}).encode())
+            except urllib.error.URLError as e:
+                print(f"Camera proxy URL error: {e.reason}")
+                self.send_response(500)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Failed to fetch camera stream: {e.reason}"}).encode())
+            except Exception as e:
+                print(f"Camera proxy error: {e}")
+                self.send_response(500)
+                self.send_cors_headers()
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+                
+        except Exception as e:
+            print(f"Camera proxy unexpected error: {e}")
+            self.send_response(500)
+            self.send_cors_headers()
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
     

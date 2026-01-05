@@ -500,6 +500,29 @@
       </div>
     </div>
 
+    <!-- Camera Feeds -->
+    <div class="card collapsed">
+      <div class="card-header" onclick="toggleCard(this)">
+        <h2>📹 Camera Feeds</h2>
+        <span class="card-toggle">▼</span>
+      </div>
+      <div class="card-body">
+        <p class="form-hint" style="margin-bottom: 1rem;">
+          <strong>Camera Feeds (RTSP/ONVIF/MJPEG/HLS/Scrypted)</strong><br>
+          Various camera streaming methods are supported:
+          <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+            <li><strong>Scrypted WebRTC</strong> (low latency): Use Scrypted's public device page. URL format: <code>https://scrypted-ip:10443/endpoint/@scrypted/core/public/#/device/26</code></li>
+            <li><strong>MJPEG</strong> (recommended): Works directly in browsers. URL format: <code>http://camera-ip/mjpg/video.mjpg</code> or <code>http://camera-ip/video.cgi</code></li>
+            <li><strong>HLS</strong>: Works in modern browsers. URL format: <code>http://camera-ip/stream.m3u8</code></li>
+            <li><strong>Snapshots</strong>: Periodic image refresh. URL format: <code>http://camera-ip/snapshot.cgi</code></li>
+            <li><strong>RTSP</strong>: Requires server-side conversion to HLS (needs ffmpeg on server)</li>
+          </ul>
+        </p>
+        <div id="camera-feeds"></div>
+        <button class="add-btn" onclick="addCameraFeed()">+ Add Camera Feed</button>
+      </div>
+    </div>
+
     <!-- Countdowns -->
     <div class="card collapsed">
       <div class="card-header" onclick="toggleCard(this)">
@@ -592,6 +615,8 @@ New Year, 2026-01-01"></textarea>
 
       document.getElementById('spotify-entity').value = s.spotify?.mediaPlayerEntity || 'media_player.spotify';
 
+      renderCameraFeeds(s.cameras?.feeds || []);
+
       document.getElementById('countdowns').value = countdownsToText(s.countdowns || []);
     }
 
@@ -638,6 +663,9 @@ New Year, 2026-01-01"></textarea>
         },
         spotify: {
           mediaPlayerEntity: document.getElementById('spotify-entity').value || 'media_player.spotify'
+        },
+        cameras: {
+          feeds: gatherCameraFeeds()
         },
         countdowns: textToCountdowns(document.getElementById('countdowns').value)
       };
@@ -987,6 +1015,55 @@ New Year, 2026-01-01"></textarea>
         }
       });
       return accounts;
+    }
+
+    // Camera Feeds
+    let cameraFeedCount = 0;
+    
+    function renderCameraFeeds(feeds) {
+      const container = document.getElementById('camera-feeds');
+      container.innerHTML = '';
+      cameraFeedCount = 0;
+      if (feeds.length === 0) {
+        // Show empty state
+      } else {
+        feeds.forEach(f => addCameraFeed(f));
+      }
+    }
+
+    function addCameraFeed(feed = null) {
+      const container = document.getElementById('camera-feeds');
+      const index = cameraFeedCount++;
+      const div = document.createElement('div');
+      div.className = 'account-card camera-feed-card';
+      div.id = `camera-feed-${index}`;
+      div.innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Camera Name</label>
+          <input type="text" class="form-input camera-name" value="${feed?.name || ''}" placeholder="Front Door Camera">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stream URL</label>
+          <input type="url" class="form-input camera-url" value="${feed?.url || ''}" placeholder="rtsp://... or http://.../stream.m3u8">
+          <div class="form-hint">RTSP, HLS, or any browser-compatible video stream URL. RTSP requires server-side conversion to HLS/WebRTC.</div>
+        </div>
+        <button class="btn btn-secondary" onclick="this.parentElement.remove()" style="margin-top:0.5rem">Remove</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function gatherCameraFeeds() {
+      const feeds = [];
+      document.querySelectorAll('.camera-feed-card').forEach(card => {
+        const url = card.querySelector('.camera-url')?.value?.trim();
+        if (url) {
+          feeds.push({
+            name: card.querySelector('.camera-name')?.value || 'Camera',
+            url
+          });
+        }
+      });
+      return feeds;
     }
 
     // ICS Feeds
