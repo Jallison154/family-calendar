@@ -521,6 +521,12 @@
           </ul>
           <strong>Note:</strong> If you see "Not logged in" errors with Scrypted public pages, use the HLS rebroadcast URL instead.
         </p>
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="camera-show-titles" checked>
+            <span>Show camera feed titles</span>
+          </label>
+        </div>
         <div id="camera-feeds"></div>
         <button class="add-btn" onclick="addCameraFeed()">+ Add Camera Feed</button>
       </div>
@@ -618,6 +624,7 @@ New Year, 2026-01-01"></textarea>
 
       document.getElementById('spotify-entity').value = s.spotify?.mediaPlayerEntity || 'media_player.spotify';
 
+      document.getElementById('camera-show-titles').checked = s.cameras?.showTitles !== false;
       renderCameraFeeds(s.cameras?.feeds || []);
 
       document.getElementById('countdowns').value = countdownsToText(s.countdowns || []);
@@ -668,7 +675,8 @@ New Year, 2026-01-01"></textarea>
           mediaPlayerEntity: document.getElementById('spotify-entity').value || 'media_player.spotify'
         },
         cameras: {
-          feeds: gatherCameraFeeds()
+          feeds: gatherCameraFeeds(),
+          showTitles: document.getElementById('camera-show-titles').checked
         },
         countdowns: textToCountdowns(document.getElementById('countdowns').value)
       };

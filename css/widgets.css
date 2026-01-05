@@ -642,6 +642,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.camera-feed-wrapper:not(:has(.camera-feed-name)) .camera-feed-container {
+  max-height: 800px;
 }
 
 .camera-feed-container {

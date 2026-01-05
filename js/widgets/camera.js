@@ -7,6 +7,7 @@ class CameraWidget extends BaseWidget {
     super(config);
     this.type = 'camera';
     this.cameras = config.cameras || window.CONFIG?.cameras?.feeds || [];
+    this.showTitles = config.showTitles !== undefined ? config.showTitles : window.CONFIG?.cameras?.showTitles !== undefined ? window.CONFIG?.cameras?.showTitles : true;
     this.updateInterval = null;
   }
 
@@ -61,7 +62,7 @@ class CameraWidget extends BaseWidget {
       
       html += `
         <div class="camera-feed-wrapper">
-          ${camera.name ? `<div class="camera-feed-name">${this.escapeHtml(camera.name)}</div>` : ''}
+          ${(this.showTitles && camera.name) ? `<div class="camera-feed-name">${this.escapeHtml(camera.name)}</div>` : ''}
           <div class="camera-feed-container">
             ${isScryptedHls ? `
             <!-- Scrypted HLS rebroadcast - works without authentication -->
@@ -72,6 +73,7 @@ class CameraWidget extends BaseWidget {
               muted
               playsinline
               preload="auto"
+              loop
               controls
             >
               <source src="${streamUrl}" type="application/vnd.apple.mpegurl">
@@ -126,6 +128,7 @@ class CameraWidget extends BaseWidget {
               muted
               playsinline
               preload="auto"
+              loop
             >
               <source src="${streamUrl}">
               Your browser does not support the video tag.
@@ -241,11 +244,34 @@ class CameraWidget extends BaseWidget {
           }
         });
 
-        // Try to play the video
-        video.play().catch(err => {
-          console.warn(`Camera feed play error (${camera.name || camera.url}):`, err);
-          // Video might still work, just muted autoplay was blocked
+        // Try to play the video and ensure it stays playing
+        const ensurePlaying = () => {
+          if (video && !video.paused && video.readyState >= 2) {
+            return; // Already playing
+          }
+          video.play().catch(err => {
+            console.warn(`Camera feed play error (${camera.name || camera.url}):`, err);
+            // Retry after a short delay
+            setTimeout(ensurePlaying, 2000);
+          });
+        };
+        
+        // Start playing
+        ensurePlaying();
+        
+        // Ensure video keeps playing if it pauses
+        video.addEventListener('pause', () => {
+          if (!document.hidden) {
+            ensurePlaying();
+          }
         });
+        
+        // Keep alive: check every 5 seconds that video is still playing
+        setInterval(() => {
+          if (!document.hidden && video.paused) {
+            ensurePlaying();
+          }
+        }, 5000);
       } else if (isImage) {
         // Handle image load errors (for MJPEG streams and snapshots)
         image.addEventListener('error', (e) => {
@@ -271,16 +297,28 @@ class CameraWidget extends BaseWidget {
         // For snapshot endpoints, refresh periodically
         const isSnapshot = camera.url.includes('/snapshot');
         if (isSnapshot) {
-          // Refresh snapshot every 2 seconds
-          setInterval(() => {
+          // Refresh snapshot every 1 second for smoother updates
+          const snapshotInterval = setInterval(() => {
             if (image && image.style.display !== 'none') {
               const currentSrc = image.src;
               // Add timestamp to bust cache
               image.src = currentSrc.split('?')[0] + '?t=' + Date.now();
+            } else {
+              clearInterval(snapshotInterval);
             }
-          }, 2000);
+          }, 1000);
         }
         // MJPEG streams auto-refresh, so no interval needed
+        // But ensure they keep loading if paused
+        else if (image && !isSnapshot) {
+          image.addEventListener('error', () => {
+            // Retry on error
+            setTimeout(() => {
+              const currentSrc = image.src;
+              image.src = currentSrc.split('?')[0] + '?t=' + Date.now();
+            }, 2000);
+          });
+        }
       } else if (isIframe) {
         // Handle iframe load errors (for Scrypted WebRTC)
         iframe.addEventListener('error', (e) => {

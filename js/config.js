@@ -43,7 +43,8 @@ const CONFIG = {
 
   // Camera Feeds (RTSP/HLS/WebRTC)
   cameras: {
-    feeds: []
+    feeds: [],
+    showTitles: true  // Show camera feed names/titles
   },
 
   // Display Settings
