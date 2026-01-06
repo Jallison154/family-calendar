@@ -23,11 +23,33 @@ class CameraWidget extends BaseWidget {
 
   onInit() {
     this.render();
+    
+    // Listen for config changes and update cameras
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'familyDashboardSettings' || e.key === 'familyDashboardConfig' || e.key === 'dashboardUpdate') {
+        // Config changed, refresh cameras from CONFIG
+        const newCameras = window.CONFIG?.cameras?.feeds || [];
+        this.cameras = newCameras;
+        this.showTitles = window.CONFIG?.cameras?.showTitles !== undefined 
+          ? window.CONFIG?.cameras?.showTitles 
+          : true;
+        this.render();
+      }
+    });
+    
+    // Also check for CONFIG updates periodically (in case it's updated directly)
+    this.startAutoUpdate(10000); // Check every 10 seconds for config changes
   }
 
   render() {
     const container = this.element.querySelector(`#${this.id}-container`);
     if (!container) return;
+
+    // Always read cameras from current CONFIG (in case it was updated)
+    this.cameras = window.CONFIG?.cameras?.feeds || [];
+    this.showTitles = window.CONFIG?.cameras?.showTitles !== undefined 
+      ? window.CONFIG?.cameras?.showTitles 
+      : true;
 
     if (this.cameras.length === 0) {
       container.innerHTML = '<div class="camera-empty">No camera feeds configured</div>';
@@ -459,8 +481,8 @@ class CameraWidget extends BaseWidget {
   }
 
   update() {
-    // Refresh video sources if needed
-    // This could be used to reconnect streams
+    // Always re-render to pick up any config changes
+    // render() now reads from CONFIG dynamically, so it will always have the latest settings
     this.render();
   }
 
