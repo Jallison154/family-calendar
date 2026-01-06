@@ -386,8 +386,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
             
             # Decode URL and credentials
             url = unquote(url)
-            username = unquote(username_param) if username_param else None
-            password = unquote(password_param) if password_param else None
+            # Handle None and empty strings - only use credentials if they have actual values
+            if username_param:
+                username = unquote(username_param).strip()
+                username = username if username else None
+            else:
+                username = None
+            if password_param:
+                password = unquote(password_param).strip()
+                password = password if password else None
+            else:
+                password = None
             
             # Check if it's an RTSP URL - note: browsers can't play RTSP directly
             # For RTSP, you would need ffmpeg to convert to HLS or WebRTC
@@ -421,7 +430,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
             is_mjpeg = '/mjpg/' in url or '/mjpeg/' in url or 'video.cgi' in url or url.endswith('.mjpg') or url.endswith('.mjpeg')
             
             # Parse URL to handle embedded credentials (if not provided separately)
-            parsed_url = urlparse(url)
+            try:
+                parsed_url = urlparse(url)
+            except Exception as e:
+                print(f"Error parsing URL: {e}")
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Invalid URL format: {str(e)}"}).encode())
+                return
+            
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Family Calendar Camera Proxy)',
                 'Accept': '*/*'
@@ -433,9 +451,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # If credentials weren't provided as separate parameters, try to extract from URL
             if not username and not password and '@' in parsed_url.netloc:
                 # Extract credentials from URL
-                auth_part, clean_netloc = parsed_url.netloc.rsplit('@', 1)
-                if ':' in auth_part:
-                    username, password = auth_part.split(':', 1)
+                try:
+                    auth_part, clean_netloc = parsed_url.netloc.rsplit('@', 1)
+                    if ':' in auth_part:
+                        username, password = auth_part.split(':', 1)
+                except Exception as e:
+                    print(f"Error extracting credentials from URL: {e}")
+                    # Continue without credentials
             
             # Build clean URL
             clean_url = f"{parsed_url.scheme}://{clean_netloc}{parsed_url.path}"
