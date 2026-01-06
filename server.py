@@ -369,32 +369,51 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """Proxy camera stream requests (RTSP, HLS, MJPEG, or HTTP streams)"""
         try:
             parsed_path = urlparse(self.path)
-            query_params = parse_qs(parsed_path.query)
+            query_params = parse_qs(parsed_path.query, keep_blank_values=True)
             
             # Get URL from query parameter
-            url = query_params.get('url', [None])[0]
-            if not url:
+            url_list = query_params.get('url', [])
+            if not url_list or not url_list[0]:
                 self.send_response(400)
                 self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Missing 'url' parameter"}).encode())
                 return
             
+            url = url_list[0]
+            
             # Get username and password from query parameters (if provided separately)
-            username_param = query_params.get('username', [None])[0]
-            password_param = query_params.get('password', [None])[0]
+            username_list = query_params.get('username', [])
+            password_list = query_params.get('password', [])
+            username_param = username_list[0] if username_list else None
+            password_param = password_list[0] if password_list else None
             
             # Decode URL and credentials
-            url = unquote(url)
+            try:
+                url = unquote(url)
+            except Exception as e:
+                print(f"Error decoding URL: {e}, URL: {url[:100]}")
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Invalid URL encoding: {str(e)}"}).encode())
+                return
+            
             # Handle None and empty strings - only use credentials if they have actual values
             if username_param:
-                username = unquote(username_param).strip()
-                username = username if username else None
+                try:
+                    username = unquote(username_param).strip()
+                    username = username if username else None
+                except Exception:
+                    username = None
             else:
                 username = None
             if password_param:
-                password = unquote(password_param).strip()
-                password = password if password else None
+                try:
+                    password = unquote(password_param).strip()
+                    password = password if password else None
+                except Exception:
+                    password = None
             else:
                 password = None
             
@@ -470,12 +489,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             req = urllib.request.Request(clean_url, headers=headers)
             
             # Set up authentication if credentials were found (from URL or parameters)
-            opener = urllib.request.build_opener()
             if username and password:
-                password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-                password_mgr.add_password(None, f"{parsed_url.scheme}://{clean_netloc}", username, password)
-                auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-                opener = urllib.request.build_opener(auth_handler)
+                try:
+                    password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+                    password_mgr.add_password(None, f"{parsed_url.scheme}://{clean_netloc}", username, password)
+                    auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+                    opener = urllib.request.build_opener(auth_handler)
+                except Exception as e:
+                    print(f"Error setting up authentication: {e}")
+                    # Fall back to no authentication
+                    opener = urllib.request.build_opener()
+            else:
+                opener = urllib.request.build_opener()
             
             try:
                 with opener.open(req, timeout=30) as response:
@@ -544,6 +569,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         except Exception as e:
             error_traceback = traceback.format_exc()
             print(f"Camera proxy unexpected error: {e}")
+            print(f"Path: {self.path}")
             print(f"Traceback:\n{error_traceback}")
             try:
                 self.send_response(500)
@@ -551,10 +577,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 # Only send error message, not full traceback to client (security)
-                self.wfile.write(json.dumps({"error": str(e)}).encode())
-            except Exception:
+                error_msg = str(e)
+                # Include more context for debugging
+                if 'url' in locals():
+                    error_msg += f" (URL: {url[:50]}...)" if len(url) > 50 else f" (URL: {url})"
+                self.wfile.write(json.dumps({"error": error_msg}).encode())
+            except Exception as send_error:
                 # If we can't send error response, just log it
-                pass
+                print(f"Failed to send error response: {send_error}")
     
     def _stream_camera_response(self, response, is_mjpeg, original_url):
         """Helper method to stream camera response"""

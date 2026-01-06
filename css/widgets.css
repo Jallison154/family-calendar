@@ -200,7 +200,7 @@
   padding: 0.5rem;
   background: var(--event-color, var(--color-accent));
   border-radius: 6px;
-  font-size: 0.5625rem;
+  font-size: 1.4rem; /* Increased by 10pt (from ~0.56rem to 1.4rem) */
   color: white; /* Default, will be overridden by inline style if light color */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Default, will be overridden by inline style if light color */
   overflow: hidden;

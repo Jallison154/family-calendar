@@ -273,10 +273,27 @@ class CalendarWidget extends BaseWidget {
       const textColor = isLight ? 'black' : 'white';
       const textShadow = isLight ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.2)';
       const title = Helpers.escapeHtml(event.title);
-      const time = event.isAllDay ? '' : Helpers.formatTime(new Date(event.start), false);
+      
+      // Determine if event has a time component
+      // Show time unless explicitly marked as all-day
+      let time = '';
+      if (event.start && event.isAllDay !== true) {
+        try {
+          const startDate = new Date(event.start);
+          // Check if date is valid
+          if (!isNaN(startDate.getTime())) {
+            // Always show time for non-all-day events
+            // Even if time is midnight, it's still a valid time
+            time = Helpers.formatTime(startDate, false);
+          }
+        } catch (e) {
+          console.warn('Error formatting event time:', e, event);
+        }
+      }
+      
       return `
         <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
-          ${time ? `<span style="font-size: 0.5rem; opacity: 0.8;">${time}</span> ` : ''}
+          ${time ? `<span style="font-size: 0.75rem; opacity: 0.9; margin-right: 0.25rem;">${time}</span>` : ''}
           <span>${title}</span>
         </div>
       `;
