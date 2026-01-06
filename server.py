@@ -612,11 +612,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     print(f"{'='*60}\n")
                         
             except urllib.error.HTTPError as e:
-                error_body = e.read()
-                error_text = error_body.decode('utf-8', errors='ignore')[:200] if error_body else ''
+                # Try to read error body, but don't fail if we can't
+                error_text = ''
+                try:
+                    error_body = e.read()
+                    error_text = error_body.decode('utf-8', errors='ignore')[:200] if error_body else ''
+                except Exception:
+                    pass
+                
                 print(f"❌ HTTP Error: {e.code} {e.reason}")
                 print(f"   URL: {clean_url}")
-                print(f"   Response body: {error_text}")
+                if error_text:
+                    print(f"   Response body: {error_text}")
                 if e.code == 401:
                     print("   → This is an authentication error. Check username/password.")
                 elif e.code == 404:
@@ -624,18 +631,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 elif e.code == 403:
                     print("   → Access forbidden. Check camera permissions.")
                 
-                self.send_response(e.code)
-                self.send_cors_headers()
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                error_msg = {
-                    "error": f"HTTP {e.code}: {e.reason}",
-                    "url": clean_url,
-                    "message": f"Camera returned error {e.code}. Check server console for details."
-                }
-                if e.code == 401:
-                    error_msg["hint"] = "Authentication failed. Verify username and password are correct."
-                self.wfile.write(json.dumps(error_msg).encode())
+                try:
+                    self.send_response(e.code)
+                    self.send_cors_headers()
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    error_msg = {
+                        "error": f"HTTP {e.code}: {e.reason}",
+                        "url": clean_url,
+                        "message": f"Camera returned error {e.code}. Check server console for details."
+                    }
+                    if e.code == 401:
+                        error_msg["hint"] = "Authentication failed. Verify username and password are correct."
+                    self.wfile.write(json.dumps(error_msg).encode())
+                except Exception as send_err:
+                    print(f"❌ Failed to send error response: {send_err}")
             except urllib.error.URLError as e:
                 print(f"❌ URL Error: {e.reason}")
                 print(f"   URL: {clean_url}")
