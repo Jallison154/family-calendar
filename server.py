@@ -80,21 +80,27 @@ class DashboardHandler(BaseHTTPRequestHandler):
     
     def send_settings(self):
         """Send current settings"""
+        print(f"\n📋 GET /api/settings request from {self.address_string()}")
         try:
             with SETTINGS_LOCK:
                 if os.path.exists(SETTINGS_FILE):
                     with open(SETTINGS_FILE, 'r') as f:
                         settings = json.load(f)
+                    print(f"✓ Settings loaded from {SETTINGS_FILE} ({len(settings)} keys)")
                 else:
                     settings = {}
+                    print(f"⚠ Settings file {SETTINGS_FILE} not found, returning empty settings")
             
             self.send_response(200)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(settings).encode())
+            print(f"✓ Settings sent successfully\n")
         except Exception as e:
-            print(f"Error reading settings: {e}")
+            error_traceback = traceback.format_exc()
+            print(f"❌ ERROR reading settings: {e}")
+            print(f"Traceback:\n{error_traceback}")
             self.send_response(500)
             self.send_cors_headers()
             self.end_headers()
@@ -102,11 +108,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
     
     def save_settings(self):
         """Save settings from request body"""
+        print(f"\n💾 POST /api/settings request from {self.address_string()}")
         try:
             # Read request body
             content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                print("❌ ERROR: Empty request body")
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Empty request body"}).encode())
+                return
+                
             body = self.rfile.read(content_length)
-            settings = json.loads(body.decode())
+            print(f"Received {content_length} bytes")
+            
+            try:
+                settings = json.loads(body.decode())
+            except json.JSONDecodeError as e:
+                print(f"❌ ERROR: Invalid JSON in request body: {e}")
+                self.send_response(400)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Invalid JSON: {str(e)}"}).encode())
+                return
             
             # Add timestamp
             settings['_lastUpdated'] = datetime.now().isoformat()
@@ -116,14 +141,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 with open(SETTINGS_FILE, 'w') as f:
                     json.dump(settings, f, indent=2)
             
+            print(f"✓ Settings saved to {SETTINGS_FILE} at {settings.get('_lastUpdated')}")
+            print(f"  Settings keys: {list(settings.keys())}")
+            
             self.send_response(200)
             self.send_cors_headers()
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"success": True}).encode())
-            print(f"Settings saved at {settings.get('_lastUpdated')}")
+            print(f"✓ Response sent successfully\n")
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            error_traceback = traceback.format_exc()
+            print(f"❌ ERROR saving settings: {e}")
+            print(f"Traceback:\n{error_traceback}")
             self.send_response(500)
             self.send_cors_headers()
             self.end_headers()
