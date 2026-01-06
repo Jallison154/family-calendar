@@ -380,8 +380,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Missing 'url' parameter"}).encode())
                 return
             
-            # Decode URL
+            # Get username and password from query parameters (if provided separately)
+            username_param = query_params.get('username', [None])[0]
+            password_param = query_params.get('password', [None])[0]
+            
+            # Decode URL and credentials
             url = unquote(url)
+            username = unquote(username_param) if username_param else None
+            password = unquote(password_param) if password_param else None
             
             # Check if it's an RTSP URL - note: browsers can't play RTSP directly
             # For RTSP, you would need ffmpeg to convert to HLS or WebRTC
@@ -414,7 +420,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # Check if it's an MJPEG stream (for better handling)
             is_mjpeg = '/mjpg/' in url or '/mjpeg/' in url or 'video.cgi' in url or url.endswith('.mjpg') or url.endswith('.mjpeg')
             
-            # Parse URL to handle embedded credentials
+            # Parse URL to handle embedded credentials (if not provided separately)
             parsed_url = urlparse(url)
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Family Calendar Camera Proxy)',
@@ -423,11 +429,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             
             # Build URL without credentials in netloc
             clean_netloc = parsed_url.netloc
-            username = None
-            password = None
             
-            if '@' in parsed_url.netloc:
-                # Extract credentials
+            # If credentials weren't provided as separate parameters, try to extract from URL
+            if not username and not password and '@' in parsed_url.netloc:
+                # Extract credentials from URL
                 auth_part, clean_netloc = parsed_url.netloc.rsplit('@', 1)
                 if ':' in auth_part:
                     username, password = auth_part.split(':', 1)
@@ -442,7 +447,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # Create request
             req = urllib.request.Request(clean_url, headers=headers)
             
-            # Set up authentication if credentials were found
+            # Set up authentication if credentials were found (from URL or parameters)
             opener = urllib.request.build_opener()
             if username and password:
                 password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
