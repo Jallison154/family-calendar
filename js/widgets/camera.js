@@ -24,21 +24,26 @@ class CameraWidget extends BaseWidget {
   onInit() {
     this.render();
     
+    // Store last known cameras config to detect changes
+    this.lastCamerasConfig = JSON.stringify(window.CONFIG?.cameras?.feeds || []);
+    
     // Listen for config changes and update cameras
     window.addEventListener('storage', (e) => {
       if (e.key === 'familyDashboardSettings' || e.key === 'familyDashboardConfig' || e.key === 'dashboardUpdate') {
         // Config changed, refresh cameras from CONFIG
         const newCameras = window.CONFIG?.cameras?.feeds || [];
-        this.cameras = newCameras;
-        this.showTitles = window.CONFIG?.cameras?.showTitles !== undefined 
-          ? window.CONFIG?.cameras?.showTitles 
-          : true;
-        this.render();
+        const newConfig = JSON.stringify(newCameras);
+        if (newConfig !== this.lastCamerasConfig) {
+          console.log('📹 Camera config changed, updating...');
+          this.lastCamerasConfig = newConfig;
+          this.render();
+        }
       }
     });
     
-    // Also check for CONFIG updates periodically (in case it's updated directly)
-    this.startAutoUpdate(10000); // Check every 10 seconds for config changes
+    // Check for CONFIG updates periodically (less frequently to avoid too many requests)
+    // Only update if cameras actually changed
+    this.startAutoUpdate(60000); // Check every 60 seconds for config changes
   }
 
   render() {
@@ -481,9 +486,16 @@ class CameraWidget extends BaseWidget {
   }
 
   update() {
-    // Always re-render to pick up any config changes
-    // render() now reads from CONFIG dynamically, so it will always have the latest settings
-    this.render();
+    // Check if cameras config changed before re-rendering
+    const currentCameras = window.CONFIG?.cameras?.feeds || [];
+    const currentConfig = JSON.stringify(currentCameras);
+    
+    if (currentConfig !== this.lastCamerasConfig) {
+      console.log('📹 Camera config changed, updating feeds...');
+      this.lastCamerasConfig = currentConfig;
+      this.render();
+    }
+    // Don't re-render if config hasn't changed (avoids unnecessary API requests)
   }
 
   destroy() {
