@@ -547,12 +547,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # Set up authentication if credentials were found (from URL or parameters)
             if username and password:
                 try:
-                    print(f"Setting up HTTP Basic Auth for {clean_netloc}")
+                    print(f"Setting up HTTP authentication (Basic + Digest) for {clean_netloc}")
                     password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
                     password_mgr.add_password(None, f"{parsed_url.scheme}://{clean_netloc}", username, password)
-                    auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-                    opener = urllib.request.build_opener(auth_handler)
-                    print("✓ Authentication handler created")
+                    
+                    # Support both Basic and Digest authentication
+                    basic_auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+                    digest_auth_handler = urllib.request.HTTPDigestAuthHandler(password_mgr)
+                    
+                    # Create opener with both handlers
+                    opener = urllib.request.build_opener(basic_auth_handler, digest_auth_handler)
+                    print("✓ Authentication handlers created (Basic + Digest)")
                 except Exception as e:
                     print(f"❌ ERROR: Error setting up authentication: {e}")
                     traceback.print_exc()
