@@ -91,6 +91,7 @@ class DashboardApp {
           }
         } catch (e) {
           // Silent fail - server might be temporarily unavailable
+          // Network errors are expected and handled gracefully
         }
       }
     }, 30000);
@@ -114,7 +115,9 @@ class DashboardApp {
       if (this.lastServerVersion === null) {
         // First check - just store the version
         this.lastServerVersion = currentVersion;
-        console.log('📌 Server version:', currentVersion);
+        if (window.DEBUG_MODE === true) {
+          console.log('📌 Server version:', currentVersion);
+        }
       } else if (this.lastServerVersion !== currentVersion) {
         // Version changed - reload the page
         console.log('🔄 Server code updated, reloading page...');
@@ -123,6 +126,7 @@ class DashboardApp {
       }
     } catch (e) {
       // Silently fail - version endpoint might not be available or network issue
+      // Network errors are expected when server is unavailable
     }
   }
 

@@ -46,19 +46,21 @@ class CameraWidget extends BaseWidget {
       // For HTTP/HLS, this will proxy the stream
       // MJPEG streams work directly in browsers
       // Scrypted WebRTC streams use iframe embedding
-      const streamUrl = this.getStreamUrl(camera.url);
-      const isScrypted = streamUrl.includes('@scrypted') || 
-                         streamUrl.includes('/endpoint/@scrypted/') ||
-                         streamUrl.includes('/webrtc/');
-      const isScryptedHls = streamUrl.includes('/rebroadcast/hls/') ||
-                            (isScrypted && (streamUrl.includes('.m3u8') || camera.url.includes('.m3u8')));
-      const isHls = streamUrl.includes('.m3u8') || camera.url.includes('.m3u8');
-      const isMjpeg = streamUrl.includes('/mjpg/') || 
-                      streamUrl.includes('/mjpeg/') || 
-                      streamUrl.includes('video.cgi') ||
-                      streamUrl.includes('.mjpg') ||
-                      streamUrl.includes('.mjpeg');
-      const isSnapshot = streamUrl.includes('/snapshot');
+      const streamUrl = this.getStreamUrl(camera);
+      const originalUrl = camera.url || '';
+      // Use original URL for type detection (before credentials are added)
+      const isScrypted = originalUrl.includes('@scrypted') || 
+                         originalUrl.includes('/endpoint/@scrypted/') ||
+                         originalUrl.includes('/webrtc/');
+      const isScryptedHls = originalUrl.includes('/rebroadcast/hls/') ||
+                            (isScrypted && originalUrl.includes('.m3u8'));
+      const isHls = originalUrl.includes('.m3u8');
+      const isMjpeg = originalUrl.includes('/mjpg/') || 
+                      originalUrl.includes('/mjpeg/') ||
+                      originalUrl.includes('video.cgi') ||
+                      originalUrl.includes('.mjpg') ||
+                      originalUrl.includes('.mjpeg');
+      const isSnapshot = originalUrl.includes('/snapshot');
       
       html += `
         <div class="camera-feed-wrapper">
@@ -150,7 +152,30 @@ class CameraWidget extends BaseWidget {
     this.setupVideos();
   }
 
-  getStreamUrl(originalUrl) {
+  getStreamUrl(camera) {
+    // camera can be an object with {url, username, password} or just a string URL
+    const originalUrl = typeof camera === 'string' ? camera : (camera.url || '');
+    const username = typeof camera === 'object' ? (camera.username || '') : '';
+    const password = typeof camera === 'object' ? (camera.password || '') : '';
+    
+    // Build URL with credentials if provided
+    let urlWithCredentials = originalUrl;
+    if (username && password && !originalUrl.includes('@') && !originalUrl.includes('@scrypted')) {
+      // Embed credentials in URL: http://user:pass@host/path
+      try {
+        const urlObj = new URL(originalUrl);
+        urlObj.username = username;
+        urlObj.password = password;
+        urlWithCredentials = urlObj.toString();
+      } catch (e) {
+        // If URL parsing fails, try manual construction
+        const match = originalUrl.match(/^(https?:\/\/)([^\/]+)(.*)$/);
+        if (match) {
+          urlWithCredentials = `${match[1]}${username}:${password}@${match[2]}${match[3]}`;
+        }
+      }
+    }
+    
     // ONVIF cameras typically provide:
     // 1. RTSP streams (rtsp://...) - needs server-side conversion
     // 2. MJPEG over HTTP (http://.../video.cgi or /mjpg/video.mjpg) - works directly in browsers!
@@ -163,57 +188,66 @@ class CameraWidget extends BaseWidget {
     // - Public device page: /endpoint/@scrypted/core/public/#/device/{id} (requires auth)
     // - WebRTC endpoint: /webrtc/{camera-name} (may work without auth)
     // - HLS rebroadcast: /endpoint/@scrypted/rebroadcast/hls/{id} (no auth needed)
-    const isScrypted = originalUrl.includes('@scrypted') || 
-                       originalUrl.includes('/endpoint/@scrypted/') ||
-                       originalUrl.includes('/webrtc/');
+    const isScrypted = urlWithCredentials.includes('@scrypted') || 
+                       urlWithCredentials.includes('/endpoint/@scrypted/') ||
+                       urlWithCredentials.includes('/webrtc/');
     
     // Scrypted HLS rebroadcast works better than public page (no auth needed)
-    const isScryptedHls = originalUrl.includes('/rebroadcast/hls/') ||
-                          (isScrypted && originalUrl.includes('.m3u8'));
+    const isScryptedHls = urlWithCredentials.includes('/rebroadcast/hls/') ||
+                          (isScrypted && urlWithCredentials.includes('.m3u8'));
     
     // Check if it's an MJPEG stream (works directly in browsers)
-    const isMjpeg = originalUrl.includes('/mjpg/') || 
-                    originalUrl.includes('/mjpeg/') || 
-                    originalUrl.includes('video.cgi') ||
-                    originalUrl.includes('.mjpg') ||
-                    originalUrl.includes('.mjpeg');
+    const isMjpeg = urlWithCredentials.includes('/mjpg/') || 
+                    urlWithCredentials.includes('/mjpeg/') || 
+                    urlWithCredentials.includes('video.cgi') ||
+                    urlWithCredentials.includes('.mjpg') ||
+                    urlWithCredentials.includes('.mjpeg');
     
     // Scrypted HLS rebroadcast - use video element (no auth, better performance)
     if (isScryptedHls) {
-      return originalUrl;
+      return urlWithCredentials;
     }
     
     // Scrypted public page or WebRTC endpoint - use iframe (may require auth)
     // Note: Public pages often require authentication. Consider using HLS rebroadcast instead.
     if (isScrypted) {
-      return originalUrl;
+      return urlWithCredentials;
     }
     
-    // If it's MJPEG or snapshot, check if credentials are embedded
-    if (isMjpeg || originalUrl.includes('/snapshot')) {
-      // URLs with embedded credentials (user:pass@host) can have issues in browsers
-      // Proxy through server for better reliability with credentials and special characters
-      if (originalUrl.includes('@') && !originalUrl.includes('@scrypted')) {
-        // Has embedded credentials, proxy through server for better handling
-        return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+    // If it's MJPEG or snapshot, check if credentials are needed
+    if (isMjpeg || urlWithCredentials.includes('/snapshot')) {
+      // If credentials are provided, proxy through server for better reliability
+      // Browsers may have issues with embedded credentials in some cases
+      if (username && password) {
+        // Proxy through server to handle credentials reliably
+        return `/api/camera?url=${encodeURIComponent(originalUrl)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
       }
-      // No credentials or already proxied, use directly
-      return originalUrl;
+      // No credentials or already has embedded credentials, use directly
+      return urlWithCredentials;
     }
     
-    // For other HTTP/HTTPS streams, proxy through server (handles CORS, credentials, etc.)
-    // This is especially useful for MJPEG streams with credentials that might have CORS issues
-    if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
-      // Proxy through server to handle credentials and CORS better
+    // For other HTTP/HTTPS streams with credentials, proxy through server
+    if (urlWithCredentials.startsWith('http://') || urlWithCredentials.startsWith('https://')) {
+      if (username && password) {
+        // Proxy through server to handle credentials and CORS
+        return `/api/camera?url=${encodeURIComponent(originalUrl)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+      }
+      // No credentials, proxy for CORS handling
       return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
     } 
     
     // RTSP needs server-side conversion
-    if (originalUrl.startsWith('rtsp://')) {
+    if (urlWithCredentials.startsWith('rtsp://')) {
+      if (username && password) {
+        return `/api/camera?url=${encodeURIComponent(originalUrl)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+      }
       return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
     }
     
     // Assume it needs proxying
+    if (username && password) {
+      return `/api/camera?url=${encodeURIComponent(originalUrl)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+    }
     return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
   }
 
@@ -234,7 +268,11 @@ class CameraWidget extends BaseWidget {
       if (isVideo) {
         // Handle video load errors
         video.addEventListener('error', (e) => {
-          console.error(`Camera feed error (${camera.name || camera.url}):`, e);
+          // Only log error details in debug mode to reduce console noise
+          if (window.DEBUG_MODE === true) {
+            console.error(`Camera feed error (${camera.name || camera.url}):`, e);
+          }
+          // Silent fail in production - error is already shown in UI
           if (errorEl) {
             errorEl.style.display = 'flex';
             // Provide helpful error message for common issues
@@ -293,7 +331,11 @@ class CameraWidget extends BaseWidget {
       } else if (isImage) {
         // Handle image load errors (for MJPEG streams and snapshots)
         image.addEventListener('error', (e) => {
-          console.error(`Camera image error (${camera.name || camera.url}):`, e);
+          // Only log error details in debug mode to reduce console noise
+          if (window.DEBUG_MODE === true) {
+            console.error(`Camera image error (${camera.name || camera.url}):`, e);
+          }
+          // Silent fail in production - error is already shown in UI
           if (errorEl) {
             errorEl.style.display = 'flex';
           }
@@ -384,7 +426,11 @@ class CameraWidget extends BaseWidget {
       } else if (isIframe) {
         // Handle iframe load errors (for Scrypted WebRTC)
         iframe.addEventListener('error', (e) => {
-          console.error(`Camera iframe error (${camera.name || camera.url}):`, e);
+          // Only log error details in debug mode to reduce console noise
+          if (window.DEBUG_MODE === true) {
+            console.error(`Camera iframe error (${camera.name || camera.url}):`, e);
+          }
+          // Silent fail in production - error is already shown in UI
           if (errorEl) {
             errorEl.style.display = 'flex';
           }

@@ -23,7 +23,11 @@ class SettingsAPI {
       delete settings._lastUpdated;
       return settings;
     } catch (error) {
-      console.error('Failed to fetch settings from server:', error);
+      // Only log network errors in debug mode to reduce console noise
+      // Network errors are expected when server is unavailable
+      if (window.DEBUG_MODE === true) {
+        console.error('Failed to fetch settings from server:', error);
+      }
       // Return empty object if server is unavailable
       return {};
     }
@@ -49,7 +53,11 @@ class SettingsAPI {
       const result = await response.json();
       return result.success === true;
     } catch (error) {
-      console.error('Failed to save settings to server:', error);
+      // Only log network errors in debug mode to reduce console noise
+      // Network errors are expected when server is unavailable
+      if (window.DEBUG_MODE === true) {
+        console.error('Failed to save settings to server:', error);
+      }
       return false;
     }
   }

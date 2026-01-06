@@ -1061,8 +1061,18 @@ New Year, 2026-01-01"></textarea>
         </div>
         <div class="form-group">
           <label class="form-label">Stream URL</label>
-          <input type="url" class="form-input camera-url" value="${feed?.url || ''}" placeholder="rtsp://... or http://.../stream.m3u8">
-          <div class="form-hint">RTSP, HLS, or any browser-compatible video stream URL. RTSP requires server-side conversion to HLS/WebRTC.</div>
+          <input type="url" class="form-input camera-url" value="${feed?.url || ''}" placeholder="http://192.168.1.100/cgi-bin/mjpg/video.cgi?channel=1&subtype=1">
+          <div class="form-hint">RTSP, HLS, MJPEG, or any browser-compatible video stream URL. RTSP requires server-side conversion to HLS/WebRTC. If your camera requires authentication, enter the username and password below.</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Username (optional)</label>
+            <input type="text" class="form-input camera-username" value="${feed?.username || ''}" placeholder="admin">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Password (optional)</label>
+            <input type="password" class="form-input camera-password" value="${feed?.password || ''}" placeholder="password">
+          </div>
         </div>
         <button class="btn btn-secondary" onclick="this.parentElement.remove()" style="margin-top:0.5rem">Remove</button>
       `;
@@ -1074,9 +1084,13 @@ New Year, 2026-01-01"></textarea>
       document.querySelectorAll('.camera-feed-card').forEach(card => {
         const url = card.querySelector('.camera-url')?.value?.trim();
         if (url) {
+          const username = card.querySelector('.camera-username')?.value?.trim() || '';
+          const password = card.querySelector('.camera-password')?.value?.trim() || '';
           feeds.push({
             name: card.querySelector('.camera-name')?.value || 'Camera',
-            url
+            url,
+            username: username || undefined,
+            password: password || undefined
           });
         }
       });
