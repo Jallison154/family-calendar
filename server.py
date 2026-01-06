@@ -465,8 +465,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
             else:
                 password = None
                 print("Password: None (not provided)")
-            else:
-                password = None
             
             # Check if it's an RTSP URL - note: browsers can't play RTSP directly
             # For RTSP, you would need ffmpeg to convert to HLS or WebRTC
