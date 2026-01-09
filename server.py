@@ -569,7 +569,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             
             print(f"Making request to camera: {clean_url}")
             try:
-                with opener.open(req, timeout=30) as response:
+                # Use longer timeout for camera streams (they can be slow to start)
+                with opener.open(req, timeout=60) as response:
                     print(f"✓ Response received: {response.getcode()}")
                     print(f"  Content-Type: {response.headers.get('Content-Type', 'unknown')}")
                     # Get content type
@@ -595,16 +596,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         self.end_headers()
                         # Stream the data in chunks
                         chunk_size = 8192
+                        bytes_sent = 0
                         try:
                             while True:
                                 chunk = response.read(chunk_size)
                                 if not chunk:
                                     break
                                 self.wfile.write(chunk)
+                                bytes_sent += len(chunk)
+                                # Flush periodically to avoid timeout
+                                if bytes_sent % (chunk_size * 10) == 0:
+                                    self.wfile.flush()
                         except (ConnectionResetError, BrokenPipeError):
                             # Client disconnected, that's fine
                             print("Client disconnected (normal)")
                             pass
+                        print(f"✓ Streamed {bytes_sent} bytes to client")
                     else:
                         # For other content, read all at once
                         data = response.read()

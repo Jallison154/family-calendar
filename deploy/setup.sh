@@ -133,6 +133,12 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # Increase timeouts for camera streams (can be slow)
+        proxy_connect_timeout 90s;
+        proxy_send_timeout 90s;
+        proxy_read_timeout 90s;
+        # Don't buffer responses (important for streaming)
+        proxy_buffering off;
     }
     
     location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
