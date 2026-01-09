@@ -311,10 +311,40 @@ class CameraWidget extends BaseWidget {
       
       // If this is already a proxy URL or we've retried, show error
       if (image.src && image.src.includes('/api/camera')) {
-        if (errorEl) {
-          errorEl.style.display = 'flex';
-          errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed via proxy. Check server logs.';
-        }
+        // Try to fetch error details from the proxy
+        const proxyUrl = image.src;
+        fetch(proxyUrl).then(response => {
+          if (!response.ok) {
+            return response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+          }
+          return null;
+        }).then(errorData => {
+          if (errorEl) {
+            errorEl.style.display = 'flex';
+            let errorMsg = 'Unable to load camera feed.';
+            if (errorData && errorData.error) {
+              errorMsg = `Camera Error: ${errorData.error}`;
+              if (errorData.hint) {
+                errorMsg += ` (${errorData.hint})`;
+              }
+            } else if (errorData) {
+              errorMsg = `Proxy Error: ${JSON.stringify(errorData)}`;
+            } else {
+              errorMsg = 'Unable to load camera feed via proxy. Check server logs.';
+            }
+            errorEl.querySelector('.camera-error-text').textContent = errorMsg;
+          }
+        }).catch(fetchErr => {
+          // If we can't fetch error details, show generic message
+          if (errorEl) {
+            errorEl.style.display = 'flex';
+            if (window.DEBUG_MODE === true) {
+              errorEl.querySelector('.camera-error-text').textContent = `Proxy failed: ${fetchErr.message}. Check server logs.`;
+            } else {
+              errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed. Check server logs.';
+            }
+          }
+        });
         if (image) image.style.display = 'none';
         return;
       }
