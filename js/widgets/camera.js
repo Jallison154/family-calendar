@@ -74,7 +74,8 @@ class CameraWidget extends BaseWidget {
       
       const cameraId = `camera-${this.id}-${index}`;
       const cameraName = this.escapeHtml(camera.name || `Camera ${index + 1}`);
-      const streamUrl = this.buildStreamUrl(camera);
+      // Try direct URL first if no credentials (faster, avoids proxy overhead)
+      const streamUrl = this.buildStreamUrl(camera, false);
       
       html += `
         <div class="camera-feed-wrapper">
@@ -187,18 +188,18 @@ class CameraWidget extends BaseWidget {
     `;
   }
 
-  buildStreamUrl(camera) {
+  buildStreamUrl(camera, useProxy = false) {
     const originalUrl = camera.url || '';
     const username = camera.username || '';
     const password = camera.password || '';
     
-    // Scrypted URLs - use as-is
+    // Scrypted URLs - use as-is (they handle their own auth)
     if (originalUrl.includes('@scrypted') || originalUrl.includes('/endpoint/@scrypted/')) {
       return originalUrl;
     }
     
-    // For HTTP/HTTPS streams with credentials, use server proxy
-    if ((username || password) && (originalUrl.startsWith('http://') || originalUrl.startsWith('https://'))) {
+    // If proxy is explicitly requested or credentials are provided, use server proxy
+    if (useProxy || username || password) {
       const params = new URLSearchParams({
         url: originalUrl
       });
@@ -207,26 +208,14 @@ class CameraWidget extends BaseWidget {
       return `/api/camera?${params.toString()}`;
     }
     
-    // RTSP - needs server proxy
+    // RTSP - always needs server proxy
     if (originalUrl.startsWith('rtsp://')) {
-      const params = new URLSearchParams({
-        url: originalUrl
-      });
-      if (username) params.append('username', username);
-      if (password) params.append('password', password);
-      return `/api/camera?${params.toString()}`;
+      return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
     }
     
-    // HTTP/HTTPS without credentials - try direct first, fallback to proxy for CORS
+    // HTTP/HTTPS without credentials - try direct first (works if no CORS issues)
     if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
-      // For MJPEG and snapshots, try direct first
-      if (originalUrl.includes('video.cgi') || originalUrl.includes('/mjpg/') || 
-          originalUrl.includes('/snapshot') || originalUrl.includes('/mjpeg/')) {
-        // Try direct - if it fails, browser will show error and we can proxy
-        return originalUrl;
-      }
-      // For other streams, use proxy for CORS handling
-      return `/api/camera?url=${encodeURIComponent(originalUrl)}`;
+      return originalUrl; // Try direct first
     }
     
     // Unknown format - proxy it
@@ -309,26 +298,52 @@ class CameraWidget extends BaseWidget {
   setupImageHandler(image, errorEl, camera) {
     const url = camera.url || '';
     const isSnapshot = url.includes('/snapshot');
+    let retryCount = 0;
+    const maxRetries = 1; // Only retry once (direct -> proxy)
     
     image.addEventListener('error', (e) => {
       if (window.DEBUG_MODE === true) {
         console.error(`Camera image error (${camera.name || camera.url}):`, e);
+        console.error(`  Current src: ${image.src ? image.src.substring(0, 100) : 'none'}...`);
       }
-      if (errorEl) {
-        errorEl.style.display = 'flex';
-        errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed';
-      }
-      if (image) image.style.display = 'none';
       
-      // If direct URL failed and we have credentials, try proxy
-      if (url.startsWith('http') && !url.includes('/api/camera') && (camera.username || camera.password)) {
-        const streamUrl = this.buildStreamUrl(camera);
-        if (streamUrl !== image.src) {
+      retryCount++;
+      
+      // If this is already a proxy URL or we've retried, show error
+      if (image.src && image.src.includes('/api/camera')) {
+        if (errorEl) {
+          errorEl.style.display = 'flex';
+          errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed via proxy. Check server logs.';
+        }
+        if (image) image.style.display = 'none';
+        return;
+      }
+      
+      // If direct URL failed and we haven't retried yet, try proxy (handles CORS)
+      if (retryCount <= maxRetries && url.startsWith('http') && !url.includes('/api/camera')) {
+        const proxyUrl = this.buildStreamUrl(camera, true); // Force proxy
+        if (proxyUrl !== image.src) {
+          if (window.DEBUG_MODE === true) {
+            console.log(`Direct URL failed (likely CORS), retrying with proxy: ${proxyUrl.substring(0, 100)}...`);
+          }
+          // Small delay before retry
           setTimeout(() => {
-            image.src = streamUrl;
-          }, 2000);
+            image.src = proxyUrl;
+          }, 1000);
+          return; // Don't show error yet, wait for retry
         }
       }
+      
+      // Show error if retry also failed or not possible
+      if (errorEl) {
+        errorEl.style.display = 'flex';
+        if (retryCount > 1) {
+          errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed (direct and proxy both failed)';
+        } else {
+          errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed (may be CORS issue)';
+        }
+      }
+      if (image) image.style.display = 'none';
     });
 
     image.addEventListener('load', () => {
