@@ -311,40 +311,59 @@ class CameraWidget extends BaseWidget {
       
       // If this is already a proxy URL or we've retried, show error
       if (image.src && image.src.includes('/api/camera')) {
-        // Try to fetch error details from the proxy
+        // For proxy URLs, try to get error details, but don't retry the same URL
         const proxyUrl = image.src;
-        fetch(proxyUrl).then(response => {
-          if (!response.ok) {
-            return response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-          }
-          return null;
-        }).then(errorData => {
-          if (errorEl) {
-            errorEl.style.display = 'flex';
-            let errorMsg = 'Unable to load camera feed.';
-            if (errorData && errorData.error) {
-              errorMsg = `Camera Error: ${errorData.error}`;
-              if (errorData.hint) {
-                errorMsg += ` (${errorData.hint})`;
+        
+        // Use a HEAD request first to check status without downloading
+        fetch(proxyUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
+          .then(response => {
+            if (!response.ok) {
+              // If HEAD fails, try GET to get error JSON
+              return fetch(proxyUrl, { signal: AbortSignal.timeout(5000) })
+                .then(r => r.ok ? null : r.json().catch(() => ({ error: `HTTP ${r.status}` })));
+            }
+            return null;
+          })
+          .then(errorData => {
+            if (errorEl) {
+              errorEl.style.display = 'flex';
+              let errorMsg = 'Unable to load camera feed.';
+              
+              if (errorData && errorData.error) {
+                errorMsg = `Camera Error: ${errorData.error}`;
+                if (errorData.hint) {
+                  errorMsg += ` (${errorData.hint})`;
+                }
+              } else {
+                // Check if it's a timeout (504 Gateway Timeout from nginx)
+                if (image.src.includes('/api/camera')) {
+                  errorMsg = 'Camera connection timed out (504). Camera may be slow, unreachable, or nginx timeout too short.';
+                } else {
+                  errorMsg = 'Unable to load camera feed via proxy. Check server logs.';
+                }
               }
-            } else if (errorData) {
-              errorMsg = `Proxy Error: ${JSON.stringify(errorData)}`;
-            } else {
-              errorMsg = 'Unable to load camera feed via proxy. Check server logs.';
+              
+              errorEl.querySelector('.camera-error-text').textContent = errorMsg;
             }
-            errorEl.querySelector('.camera-error-text').textContent = errorMsg;
-          }
-        }).catch(fetchErr => {
-          // If we can't fetch error details, show generic message
-          if (errorEl) {
-            errorEl.style.display = 'flex';
-            if (window.DEBUG_MODE === true) {
-              errorEl.querySelector('.camera-error-text').textContent = `Proxy failed: ${fetchErr.message}. Check server logs.`;
-            } else {
-              errorEl.querySelector('.camera-error-text').textContent = 'Unable to load camera feed. Check server logs.';
+          })
+          .catch(fetchErr => {
+            // Network error or timeout fetching error details
+            if (errorEl) {
+              errorEl.style.display = 'flex';
+              let errorMsg = 'Unable to load camera feed.';
+              
+              if (fetchErr.name === 'TimeoutError' || fetchErr.message.includes('timeout')) {
+                errorMsg = 'Camera connection timed out (504). The camera may be unreachable or taking too long to respond.';
+              } else if (window.DEBUG_MODE === true) {
+                errorMsg = `Proxy failed: ${fetchErr.message}. Check server logs.`;
+              } else {
+                errorMsg = 'Unable to load camera feed. Check server logs.';
+              }
+              
+              errorEl.querySelector('.camera-error-text').textContent = errorMsg;
             }
-          }
-        });
+          });
+        
         if (image) image.style.display = 'none';
         return;
       }

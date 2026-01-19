@@ -9,6 +9,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import json
 import os
 import threading
+import time
 from datetime import datetime
 import urllib.request
 import urllib.error
@@ -47,6 +48,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         # API endpoint for getting server version
         if parsed_path.path == '/api/version':
             self.send_version()
+            return
+        
+        # Health check endpoint (fast, no file I/O)
+        if parsed_path.path == '/api/health':
+            self.send_health()
             return
         
         # Serve static files
@@ -215,6 +221,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             print(f"Error serving file {file_path}: {e}")
             self.send_response(500)
             self.end_headers()
+    
+    def send_health(self):
+        """Health check endpoint - responds immediately without file I/O"""
+        self.send_response(200)
+        self.send_cors_headers()
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            "status": "ok",
+            "service": "family-calendar",
+            "timestamp": datetime.now().isoformat()
+        }).encode())
     
     def send_version(self):
         """Send server version based on file modification times"""
@@ -568,9 +586,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 opener = urllib.request.build_opener()
             
             print(f"Making request to camera: {clean_url}")
+            print(f"Timeout: 60 seconds")
+            start_time = time.time()
             try:
                 # Use longer timeout for camera streams (they can be slow to start)
                 with opener.open(req, timeout=60) as response:
+                    elapsed = time.time() - start_time
+                    print(f"✓ Connection established in {elapsed:.2f} seconds")
                     print(f"✓ Response received: {response.getcode()}")
                     print(f"  Content-Type: {response.headers.get('Content-Type', 'unknown')}")
                     # Get content type
@@ -659,7 +681,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 except Exception as send_err:
                     print(f"❌ Failed to send error response: {send_err}")
             except urllib.error.URLError as e:
-                print(f"❌ URL Error: {e.reason}")
+                elapsed = time.time() - start_time
+                print(f"❌ URL Error after {elapsed:.2f} seconds: {e.reason}")
                 print(f"   URL: {clean_url}")
                 print(f"   Error type: {type(e).__name__}")
                 if "Name or service not known" in str(e.reason) or "nodename nor servname provided" in str(e.reason):
@@ -667,17 +690,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 elif "Connection refused" in str(e.reason):
                     print("   → Connection refused. Camera may be offline or port is wrong.")
                 elif "timed out" in str(e.reason).lower():
-                    print("   → Connection timeout. Camera may be unreachable or firewall blocking.")
+                    print(f"   → Connection timeout after {elapsed:.2f}s (60s limit). Camera may be unreachable, slow, or firewall blocking.")
+                    print("   → If nginx is timing out (504), increase nginx proxy_read_timeout to > 60s")
                 
-                self.send_response(500)
+                # Return 504 for timeout, 500 for other errors
+                status_code = 504 if "timed out" in str(e.reason).lower() else 500
+                self.send_response(status_code)
                 self.send_cors_headers()
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({
+                error_msg = {
                     "error": f"Failed to connect to camera: {e.reason}",
                     "url": clean_url,
-                    "hint": "Check if camera is online and URL is correct"
-                }).encode())
+                    "elapsed_seconds": round(elapsed, 2)
+                }
+                if "timed out" in str(e.reason).lower():
+                    error_msg["hint"] = f"Camera connection timed out after {elapsed:.1f}s. Camera may be unreachable, slow, or firewall blocking. If you see 504 Gateway Timeout, increase nginx proxy_read_timeout."
+                else:
+                    error_msg["hint"] = "Check if camera is online and URL is correct"
+                self.wfile.write(json.dumps(error_msg).encode())
             except Exception as e:
                 print(f"❌ Unexpected Error: {e}")
                 print(f"   URL: {clean_url}")
