@@ -19,10 +19,6 @@ SETTINGS_FILE = Path('settings.json')
 # Use asyncio lock for file operations
 _settings_lock = asyncio.Lock()
 
-class SettingsUpdate(BaseModel):
-    """Settings update model"""
-    settings: Dict[str, Any]
-
 @router.get("/settings")
 async def get_settings():
     """Get current settings"""
@@ -48,13 +44,12 @@ async def get_settings():
         raise HTTPException(status_code=500, detail=f"Failed to load settings: {str(e)}")
 
 @router.post("/settings")
-async def save_settings(settings_update: SettingsUpdate):
-    """Save settings"""
+async def save_settings(settings: Dict[str, Any]):
+    """Save settings - accepts settings object directly"""
     logger.info("💾 POST /api/settings request")
     try:
         async with _settings_lock:
             # Add metadata
-            settings = settings_update.settings
             settings['_lastUpdated'] = datetime.now().isoformat()
             
             # Write to file atomically

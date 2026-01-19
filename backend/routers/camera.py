@@ -108,7 +108,7 @@ async def proxy_camera(
     url: str = Query(..., description="Camera stream URL"),
     username: Optional[str] = Query(None, description="HTTP Basic/Digest username"),
     password: Optional[str] = Query(None, description="HTTP Basic/Digest password")
-):
+) -> StreamingResponse:
     """
     Proxy camera stream with authentication support
     
