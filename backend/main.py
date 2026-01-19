@@ -17,7 +17,7 @@ from typing import Optional, Dict, Any
 import logging
 from datetime import datetime
 
-from .routers import settings, camera, calendar, homeassistant, health
+from .routers import settings, calendar, homeassistant, health
 
 # Configure logging
 logging.basicConfig(
@@ -65,7 +65,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(settings.router, prefix="/api", tags=["settings"])
-app.include_router(camera.router, prefix="/api", tags=["camera"])
 app.include_router(calendar.router, prefix="/api", tags=["calendar"])
 app.include_router(homeassistant.router, prefix="/api", tags=["homeassistant"])
 app.include_router(health.router, prefix="/api", tags=["health"])

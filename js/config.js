@@ -41,12 +41,6 @@ const CONFIG = {
     mediaPlayerEntity: 'media_player.spotify'
   },
 
-  // Camera Feeds (RTSP/HLS/WebRTC)
-  cameras: {
-    feeds: [],
-    showTitles: true  // Show camera feed names/titles
-  },
-
   // Display Settings
   display: {
     use24Hour: false,
@@ -86,12 +80,6 @@ const CONFIG = {
         type: 'calendar',
         gridColumn: '1 / 13',
         gridRow: '4 / 12'
-      },
-      {
-        id: 'camera',
-        type: 'camera',
-        gridColumn: '1 / 13',
-        gridRow: '12 / 13'
       },
       {
         id: 'homeassistant',
