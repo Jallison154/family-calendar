@@ -507,7 +507,7 @@ class GoogleCalendarWidget {
         
         return `
           <div class="calendar-event all-day ${multiDayClass} ${spanClass} ${busyClass}" style="--event-color: ${event.color};" title="${this.escapeHtml(event.title)}">
-            ${showTitle ? `<span class="event-title">${this.escapeHtml(event.title)}</span>${durationBadge}` : ''}
+            ${showTitle ? `<span class="event-time">All Day</span><span class="event-title">${this.escapeHtml(event.title)}</span>${durationBadge}` : ''}
           </div>
         `;
       }).join('');
