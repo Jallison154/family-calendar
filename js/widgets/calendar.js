@@ -273,45 +273,76 @@ class CalendarWidget extends BaseWidget {
   renderDayEvents(events) {
     if (events.length === 0) return '';
     
-    // Limit to 5 visible events, show "X more" if needed
-    const visible = events.slice(0, 5);
-    const more = events.length - 5;
+    // Show ALL events with auto-scaling based on count
+    const eventCount = events.length;
     
-    return visible.map(event => {
+    // Auto-scale: reduce size when many events
+    let fontSize, timeFontSize, padding, lineClamp;
+    if (eventCount <= 3) {
+      fontSize = '0.55rem';
+      timeFontSize = '0.5rem';
+      padding = '0.15rem 0.25rem';
+      lineClamp = 2;
+    } else if (eventCount <= 5) {
+      fontSize = '0.5rem';
+      timeFontSize = '0.45rem';
+      padding = '0.1rem 0.2rem';
+      lineClamp = 1;
+    } else if (eventCount <= 8) {
+      fontSize = '0.45rem';
+      timeFontSize = '0.4rem';
+      padding = '0.08rem 0.15rem';
+      lineClamp = 1;
+    } else {
+      // Many events - ultra compact
+      fontSize = '0.4rem';
+      timeFontSize = '0.35rem';
+      padding = '0.05rem 0.1rem';
+      lineClamp = 1;
+    }
+    
+    return events.map(event => {
       const color = event.color || '#3b82f6';
       const isLight = this.isLightColor(color);
       const textColor = isLight ? 'black' : 'white';
-      const textShadow = isLight ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.2)';
+      const textShadow = isLight ? 'none' : '0 1px 1px rgba(0, 0, 0, 0.2)';
       const title = Helpers.escapeHtml(event.title);
       
       // ALWAYS show time for ALL events
-      // All-day events show "All Day", timed events show their start time
       let time = '';
       if (event.isAllDay === true) {
         time = 'All Day';
       } else if (event.start) {
         try {
           const startDate = new Date(event.start);
-          // Check if date is valid
           if (!isNaN(startDate.getTime())) {
-            // Show the actual start time
             time = Helpers.formatTime(startDate, false);
           }
         } catch (e) {
-          console.warn('Error formatting event time:', e, event);
-          time = 'All Day'; // Fallback if time parsing fails
+          time = 'All Day';
         }
       } else {
-        time = 'All Day'; // Fallback for events with no start time
+        time = 'All Day';
       }
       
+      // Compact single-line format for many events
+      if (eventCount > 5) {
+        return `
+          <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow}; padding: ${padding}; font-size: ${fontSize};">
+            <span style="font-size: ${timeFontSize}; opacity: 0.9; margin-right: 0.15rem; font-weight: 600;">${time}</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</span>
+          </div>
+        `;
+      }
+      
+      // Two-line format for fewer events  
       return `
-        <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
-          <div style="font-size: 0.55rem; opacity: 0.85; font-weight: 600;">${time}</div>
-          <div style="font-size: 0.6rem;">${title}</div>
+        <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow}; padding: ${padding};">
+          <div style="font-size: ${timeFontSize}; opacity: 0.85; font-weight: 600;">${time}</div>
+          <div style="font-size: ${fontSize}; -webkit-line-clamp: ${lineClamp}; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;">${title}</div>
         </div>
       `;
-    }).join('') + (more > 0 ? `<div class="calendar-event-more">${more} more</div>` : '');
+    }).join('');
   }
 
   showLoading() {
