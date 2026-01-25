@@ -4,8 +4,9 @@
 
 .widget-spotify {
   grid-column: span 6;
-  grid-row: span 2;
-  display: none; /* Hidden by default, shown when playing */
+  height: 500px;
+  max-height: 500px;
+  overflow: hidden;
 }
 
 .widget-spotify[style*="display: flex"] {

@@ -273,33 +273,14 @@ class CalendarWidget extends BaseWidget {
   renderDayEvents(events) {
     if (events.length === 0) return '';
     
-    // Show ALL events with auto-scaling based on count
+    // Show ALL events with CONSISTENT size
     const eventCount = events.length;
     
-    // Auto-scale: reduce size when many events
-    let fontSize, timeFontSize, padding, lineClamp;
-    if (eventCount <= 3) {
-      fontSize = '0.55rem';
-      timeFontSize = '0.5rem';
-      padding = '0.15rem 0.25rem';
-      lineClamp = 2;
-    } else if (eventCount <= 5) {
-      fontSize = '0.5rem';
-      timeFontSize = '0.45rem';
-      padding = '0.1rem 0.2rem';
-      lineClamp = 1;
-    } else if (eventCount <= 8) {
-      fontSize = '0.45rem';
-      timeFontSize = '0.4rem';
-      padding = '0.08rem 0.15rem';
-      lineClamp = 1;
-    } else {
-      // Many events - ultra compact
-      fontSize = '0.4rem';
-      timeFontSize = '0.35rem';
-      padding = '0.05rem 0.1rem';
-      lineClamp = 1;
-    }
+    // Fixed size for all days - no auto-scaling
+    const fontSize = '0.55rem';
+    const timeFontSize = '0.5rem';
+    const padding = '0.12rem 0.2rem';
+    const lineClamp = 1;
     
     return events.map(event => {
       const color = event.color || '#3b82f6';
@@ -325,8 +306,8 @@ class CalendarWidget extends BaseWidget {
         time = 'All Day';
       }
       
-      // Compact single-line format for many events
-      if (eventCount > 5) {
+      // Always use single-line format for consistency
+      if (true) {
         return `
           <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow}; padding: ${padding}; font-size: ${fontSize};">
             <span style="font-size: ${timeFontSize}; opacity: 0.9; margin-right: 0.15rem; font-weight: 600;">${time}</span>
