@@ -131,25 +131,43 @@ class TodaysEventsWidget extends BaseWidget {
   }
 
   getTodaysEvents() {
-    const todayKey = this.dateKey(this.today);
     const events = [];
     
+    // Get today's date boundaries in LOCAL time
+    const todayStart = new Date(this.today);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(this.today);
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    console.log('📅 Checking events for today:', todayStart.toDateString());
+    
     for (const event of this.events) {
-      let startDay = new Date(event.start);
-      startDay.setHours(0, 0, 0, 0);
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
       
-      let endDay = new Date(event.end);
+      // For all-day events, check if the date matches
       if (event.isAllDay) {
-        endDay.setDate(endDay.getDate() - 1);
-      }
-      endDay.setHours(0, 0, 0, 0);
-      
-      // Check if event overlaps with today
-      if (startDay <= this.today && endDay >= this.today) {
-        events.push(event);
+        // All-day event: check if today falls within the event's date range
+        const eventStartDay = new Date(eventStart);
+        eventStartDay.setHours(0, 0, 0, 0);
+        let eventEndDay = new Date(eventEnd);
+        // All-day events typically have end = start + 1 day, so subtract 1
+        eventEndDay.setDate(eventEndDay.getDate() - 1);
+        eventEndDay.setHours(23, 59, 59, 999);
+        
+        if (todayStart >= eventStartDay && todayStart <= eventEndDay) {
+          events.push(event);
+        }
+      } else {
+        // Timed event: check if any part of the event is on today
+        // Event overlaps with today if: eventStart <= todayEnd AND eventEnd >= todayStart
+        if (eventStart <= todayEnd && eventEnd >= todayStart) {
+          events.push(event);
+        }
       }
     }
     
+    console.log('📅 Found', events.length, 'events for today');
     return events;
   }
 

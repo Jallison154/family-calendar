@@ -273,6 +273,15 @@ class CalendarWidget extends BaseWidget {
   renderDayEvents(events) {
     if (events.length === 0) return '';
     
+    // Sort events: all-day first, then by start time
+    events.sort((a, b) => {
+      // All-day events come first
+      if (a.isAllDay && !b.isAllDay) return -1;
+      if (!a.isAllDay && b.isAllDay) return 1;
+      // Both all-day or both timed - sort by start time
+      return new Date(a.start) - new Date(b.start);
+    });
+    
     // Show ALL events with CONSISTENT size
     const eventCount = events.length;
     

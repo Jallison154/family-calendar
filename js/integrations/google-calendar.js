@@ -282,12 +282,14 @@ class GoogleCalendarClient {
     if (!dateStr) return new Date();
     
     // Handle DATE value type (all-day events)
+    // Use LOCAL time for all-day events to avoid timezone shift issues
     if (params.VALUE === 'DATE' || dateStr.length === 8) {
-      // All-day: YYYYMMDD
+      // All-day: YYYYMMDD - use LOCAL time, not UTC
       const year = parseInt(dateStr.substring(0, 4), 10);
       const month = parseInt(dateStr.substring(4, 6), 10) - 1;
       const day = parseInt(dateStr.substring(6, 8), 10);
-      return new Date(Date.UTC(year, month, day));
+      // Create date in LOCAL timezone at midnight
+      return new Date(year, month, day, 0, 0, 0, 0);
     } else if (dateStr.includes('T')) {
       // DateTime: YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ
       const year = parseInt(dateStr.substring(0, 4), 10);
