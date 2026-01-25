@@ -277,8 +277,8 @@ class CalendarWidget extends BaseWidget {
     const eventCount = events.length;
     
     // Fixed size for all days - no auto-scaling
-    const fontSize = '0.55rem';
-    const timeFontSize = '0.5rem';
+    const fontSize = '0.6rem';
+    const timeFontSize = '0.55rem';
     const padding = '0.12rem 0.2rem';
     const lineClamp = 1;
     

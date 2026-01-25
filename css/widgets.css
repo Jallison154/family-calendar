@@ -429,8 +429,8 @@
 /* Today's Events Widget */
 .widget-todays-events {
   grid-column: span 6;
-  height: 500px;
-  max-height: 500px;
+  height: 600px;
+  max-height: 600px;
   overflow: hidden;
 }
 
