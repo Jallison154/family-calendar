@@ -13,11 +13,11 @@ class ForecastWidget extends BaseWidget {
   }
 
   getHTML() {
-    return \`
-      <div class="widget-body" id="\${this.id}-body">
+    return `
+      <div class="widget-body" id="${this.id}-body">
         <div class="forecast-loading">Loading forecast...</div>
       </div>
-    \`;
+    `;
   }
 
   onInit() {
@@ -45,7 +45,7 @@ class ForecastWidget extends BaseWidget {
         try {
           forecast = await this.haClient.getWeatherForecast(this.weatherEntity, 'daily');
           if (forecast && forecast.length > 0) {
-            console.log('📅 Forecast widget got', forecast.length, 'days via service');
+            console.log('Forecast widget got', forecast.length, 'days via service');
           }
         } catch (e) {
           console.warn('Forecast service failed:', e);
@@ -70,7 +70,7 @@ class ForecastWidget extends BaseWidget {
   }
 
   render() {
-    const body = this.element.querySelector(\`#\${this.id}-body\`);
+    const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
     if (this.forecast.length === 0) {
@@ -78,8 +78,6 @@ class ForecastWidget extends BaseWidget {
       return;
     }
 
-    const unit = window.CONFIG?.weather?.unit || '°F';
-    
     const forecastHTML = this.forecast.map(day => {
       const date = new Date(day.datetime || day.date);
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
@@ -88,22 +86,22 @@ class ForecastWidget extends BaseWidget {
       const high = day.temperature ?? day.temp ?? day.temp_max ?? '--';
       const low = day.templow ?? day.temp_low ?? day.temp_min ?? '--';
       
-      return \`
+      return `
         <div class="forecast-day-card">
-          <div class="forecast-day-name">\${dayName}</div>
-          <div class="forecast-day-icon">\${icon}</div>
+          <div class="forecast-day-name">${dayName}</div>
+          <div class="forecast-day-icon">${icon}</div>
           <div class="forecast-day-temps">
-            <span class="forecast-high">\${Math.round(high)}°</span>
-            <span class="forecast-low">\${Math.round(low)}°</span>
+            <span class="forecast-high">${Math.round(high)}°</span>
+            <span class="forecast-low">${Math.round(low)}°</span>
           </div>
         </div>
-      \`;
+      `;
     }).join('');
 
-    body.innerHTML = \`
+    body.innerHTML = `
       <div class="forecast-title">5-Day Forecast</div>
-      <div class="forecast-days">\${forecastHTML}</div>
-    \`;
+      <div class="forecast-days">${forecastHTML}</div>
+    `;
   }
 
   getIcon(condition) {
