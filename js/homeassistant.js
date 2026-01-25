@@ -171,6 +171,11 @@ class HomeAssistantClient {
       if (newState) {
         this.entityStates.set(newState.entity_id, newState);
         this.updateEntityDisplay(newState.entity_id);
+        
+        // Notify state change callbacks
+        if (this._stateChangeCallbacks) {
+          this._stateChangeCallbacks.forEach(cb => cb(newState.entity_id, newState));
+        }
       }
     }
   }
@@ -443,6 +448,74 @@ class HomeAssistantClient {
         </div>
       `;
     }
+  }
+
+  
+  /**
+   * Call a Home Assistant service
+   */
+  async callService(domain, service, data = {}) {
+    if (!this.isConnected) return null;
+    
+    try {
+      const result = await this.sendMessage({
+        type: 'call_service',
+        domain: domain,
+        service: service,
+        service_data: data,
+        return_response: true
+      });
+      return result;
+    } catch (error) {
+      console.error(`HomeAssistantClient: Error calling ${domain}.${service}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get weather forecast using the weather.get_forecasts service (HA 2024+)
+   */
+  async getWeatherForecast(entityId, type = 'daily') {
+    if (!this.isConnected) return null;
+    
+    try {
+      const result = await this.sendMessage({
+        type: 'call_service',
+        domain: 'weather',
+        service: 'get_forecasts',
+        service_data: {
+          entity_id: entityId,
+          type: type
+        },
+        return_response: true
+      });
+      
+      // Result format: { "weather.entity_id": { "forecast": [...] } }
+      if (result && result.response && result.response[entityId]) {
+        return result.response[entityId].forecast || [];
+      }
+      return [];
+    } catch (error) {
+      console.warn('HomeAssistantClient: Forecast service not available, using attributes fallback');
+      return null;
+    }
+  }
+
+  /**
+   * Get an entity state
+   */
+  getState(entityId) {
+    return this.entityStates.get(entityId);
+  }
+
+  /**
+   * Register a callback for state changes
+   */
+  onStateChange(callback) {
+    if (!this._stateChangeCallbacks) {
+      this._stateChangeCallbacks = [];
+    }
+    this._stateChangeCallbacks.push(callback);
   }
 
   disconnect() {

@@ -125,10 +125,26 @@ class WeatherWidget extends BaseWidget {
     const attrs = state.attributes;
     const condition = state.state;
     
-    // Get forecast
-    let forecast = attrs.forecast || attrs.hourly_forecast || attrs.daily_forecast || [];
-    if (!Array.isArray(forecast)) {
-      forecast = forecast.forecast || forecast.daily || forecast.hourly || [];
+    // Try to get forecast via service call (HA 2024+)
+    let forecast = [];
+    if (this.haClient && this.haClient.getWeatherForecast) {
+      try {
+        const serviceForecast = await this.haClient.getWeatherForecast(this.weatherEntity, 'daily');
+        if (serviceForecast && serviceForecast.length > 0) {
+          forecast = serviceForecast;
+          console.log('📅 Got forecast via service call:', forecast.length, 'days');
+        }
+      } catch (e) {
+        console.warn('Weather forecast service failed, using attributes fallback');
+      }
+    }
+    
+    // Fallback to attributes if service call didn't work
+    if (forecast.length === 0) {
+      forecast = attrs.forecast || attrs.hourly_forecast || attrs.daily_forecast || [];
+      if (!Array.isArray(forecast)) {
+        forecast = forecast.forecast || forecast.daily || forecast.hourly || [];
+      }
     }
     forecast = forecast.slice(0, 5);
 
