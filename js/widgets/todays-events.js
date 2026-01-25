@@ -47,6 +47,10 @@ class TodaysEventsWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
+    // ALWAYS refresh today's date (don't use stale constructor value)
+    this.today = new Date();
+    this.today.setHours(0, 0, 0, 0);
+
     // Get today's date string
     const todayDateStr = this.today.toLocaleDateString('en-US', { 
       weekday: 'long', 

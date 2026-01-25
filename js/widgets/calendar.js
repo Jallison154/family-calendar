@@ -307,8 +307,8 @@ class CalendarWidget extends BaseWidget {
       
       return `
         <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
-          <span style="font-size: 0.55rem; opacity: 0.85; margin-right: 0.2rem;">${time}</span>
-          <span>${title}</span>
+          <div style="font-size: 0.55rem; opacity: 0.85; font-weight: 600;">${time}</div>
+          <div style="font-size: 0.6rem;">${title}</div>
         </div>
       `;
     }).join('') + (more > 0 ? `<div class="calendar-event-more">${more} more</div>` : '');
