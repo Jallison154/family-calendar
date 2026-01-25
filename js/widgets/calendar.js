@@ -125,9 +125,19 @@ class CalendarWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
-    // Update today's date to current date
+    // ALWAYS use fresh current date (not cached)
     this.today = new Date();
     this.today.setHours(0, 0, 0, 0);
+    
+    // Clear stale cache if date changed
+    const todayKey = this.dateKey(this.today);
+    const lastRenderKey = this._lastRenderDateKey;
+    if (lastRenderKey && lastRenderKey !== todayKey) {
+      console.log('📅 Date changed, clearing stale cache');
+      localStorage.removeItem(this.cacheKey);
+      localStorage.removeItem(this.cacheExpiryKey);
+    }
+    this._lastRenderDateKey = todayKey;
 
     const days = this.generateDays();
     const eventsByDate = this.groupEventsByDate();
@@ -297,7 +307,7 @@ class CalendarWidget extends BaseWidget {
       
       return `
         <div class="calendar-event" style="--event-color: ${color}; color: ${textColor}; text-shadow: ${textShadow};">
-          <span style="font-size: 0.75rem; opacity: 0.9; margin-right: 0.25rem;">${time}</span>
+          <span style="font-size: 0.55rem; opacity: 0.85; margin-right: 0.2rem;">${time}</span>
           <span>${title}</span>
         </div>
       `;

@@ -176,28 +176,26 @@ class GoogleCalendarClient {
           let start = new Date(currentEvent.start);
           let end = new Date(currentEvent.end);
           
-          // Detect all-day events - ONLY mark as all-day if explicitly VALUE=DATE format
-          // Events with any time component (even if start/end are the same) should show their time
-          if (!currentEvent.isAllDay) {
-            // Mark as all-day if BOTH DTSTART and DTEND use VALUE=DATE format or 8-digit format
-            const dtstartIsDateOnly = currentEvent._dtstartParams?.VALUE === 'DATE' || 
-              (currentEvent._dtstartValue?.length === 8 && !currentEvent._dtstartValue?.includes('T'));
-            const dtendIsDateOnly = currentEvent._dtendParams?.VALUE === 'DATE' || 
-              (currentEvent._dtendValue?.length === 8 && !currentEvent._dtendValue?.includes('T'));
-            if (dtstartIsDateOnly && dtendIsDateOnly) {
-              currentEvent.isAllDay = true;
-              // Normalize dates
-              const startDate = new Date(start);
-              startDate.setHours(0, 0, 0, 0);
-              currentEvent.start = startDate;
-              currentEvent.end = new Date(startDate);
-              currentEvent.end.setDate(currentEvent.end.getDate() + 1);
-              start = startDate;
-              end = currentEvent.end;
-              console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
-            }
-            // Do NOT mark as all-day for events with timestamps, even if they're at midnight
-            // Events with times should always display their start time
+          // STRICT all-day detection: ONLY mark as all-day if EXPLICITLY VALUE=DATE
+          // Events with any time component should show their time, not "All Day"
+          const dtstartHasExplicitDate = currentEvent._dtstartParams?.VALUE === 'DATE';
+          const dtendHasExplicitDate = currentEvent._dtendParams?.VALUE === 'DATE';
+          
+          // Only mark as all-day if BOTH have explicit VALUE=DATE parameter
+          if (dtstartHasExplicitDate && dtendHasExplicitDate) {
+            currentEvent.isAllDay = true;
+            // Normalize dates for all-day events
+            const startDate = new Date(start);
+            startDate.setHours(0, 0, 0, 0);
+            currentEvent.start = startDate;
+            currentEvent.end = new Date(startDate);
+            currentEvent.end.setDate(currentEvent.end.getDate() + 1);
+            start = startDate;
+            end = currentEvent.end;
+            console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
+          } else {
+            // Ensure isAllDay is false for events with times
+            currentEvent.isAllDay = false;
           }
           
           // Clean up temporary properties
@@ -251,19 +249,14 @@ class GoogleCalendarClient {
     
     if (baseKey.startsWith('DTSTART')) {
       currentEvent.start = this.parseIcsDate(value, paramMap);
-      // Detect all-day: explicit VALUE=DATE param OR 8-digit date format (YYYYMMDD)
-      const isDateOnly = paramMap.VALUE === 'DATE' || (value.length === 8 && !value.includes('T'));
-      currentEvent.isAllDay = isDateOnly;
+      // DON'T set isAllDay here - wait until we have both DTSTART and DTEND
+      // to make a proper determination in END:VEVENT handler
       // Store the original value for later validation
       currentEvent._dtstartValue = value;
       currentEvent._dtstartParams = paramMap;
     } else if (baseKey.startsWith('DTEND')) {
       currentEvent.end = this.parseIcsDate(value, paramMap);
-      // Detect all-day: explicit VALUE=DATE param OR 8-digit date format (YYYYMMDD)
-      const isDateOnly = paramMap.VALUE === 'DATE' || (value.length === 8 && !value.includes('T'));
-      if (isDateOnly) {
-        currentEvent.isAllDay = true;
-      }
+      // DON'T set isAllDay here - wait until END:VEVENT handler
       // Store the original value for later validation
       currentEvent._dtendValue = value;
       currentEvent._dtendParams = paramMap;

@@ -197,10 +197,10 @@
 }
 
 .calendar-event {
-  padding: 0.5rem;
+  padding: 0.25rem 0.4rem;
   background: var(--event-color, var(--color-accent));
-  border-radius: 6px;
-  font-size: 1.4rem; /* Increased by 10pt (from ~0.56rem to 1.4rem) */
+  border-radius: 4px;
+  font-size: 0.65rem;
   color: white; /* Default, will be overridden by inline style if light color */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Default, will be overridden by inline style if light color */
   overflow: hidden;
@@ -416,7 +416,7 @@
 }
 
 .calendar-event-more {
-  font-size: 0.375rem;
+  font-size: 0.55rem;
   color: var(--color-text-muted);
   text-align: center;
   padding: 0.5rem;
