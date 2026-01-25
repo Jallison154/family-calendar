@@ -64,10 +64,16 @@ const CONFIG = {
         gridRow: '1 / 2'
       },
       {
+        id: 'forecast',
+        type: 'forecast',
+        gridColumn: '7 / 13',
+        gridRow: '2 / 3'
+      },
+      {
         id: 'spotify',
         type: 'spotify',
         gridColumn: '7 / 13',
-        gridRow: '2 / 4'
+        gridRow: '3 / 4'
       },
       {
         id: 'todays-events',

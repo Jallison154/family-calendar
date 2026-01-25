@@ -597,3 +597,71 @@
 }
 
 
+
+/* Forecast Widget */
+.widget-forecast {
+  grid-column: span 6;
+  height: 150px;
+  max-height: 150px;
+  padding: 0.5rem;
+}
+
+.forecast-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.forecast-days {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.forecast-day-card {
+  flex: 1;
+  text-align: center;
+  padding: 0.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.forecast-day-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.forecast-day-icon {
+  font-size: 1.5rem;
+  margin: 0.25rem 0;
+}
+
+.forecast-day-temps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.forecast-high {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.forecast-low {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.forecast-loading, .forecast-empty {
+  text-align: center;
+  padding: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
