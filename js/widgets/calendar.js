@@ -175,8 +175,8 @@ class CalendarWidget extends BaseWidget {
     const start = new Date(this.today);
     start.setDate(start.getDate() - start.getDay()); // Start of week
     
-    // Generate 4 weeks (28 days)
-    for (let i = 0; i < 28; i++) {
+    // Generate 5 weeks (35 days)
+    for (let i = 0; i < 35; i++) {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
       days.push({ date });

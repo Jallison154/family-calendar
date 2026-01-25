@@ -7,7 +7,7 @@ class GoogleCalendarClient {
   constructor(config = {}) {
     this.config = {
       icsFeeds: config.icsFeeds || [],
-      weeksAhead: config.weeksAhead || 4,
+      weeksAhead: config.weeksAhead || 5,
       refreshInterval: config.refreshInterval || 300000,
       corsProxy: config.corsProxy || 'https://api.allorigins.win/raw?url='
     };
@@ -18,9 +18,9 @@ class GoogleCalendarClient {
     // Use a wider date range to ensure we get all events
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    // Get events from 30 days ago to 60 days ahead (very wide range)
-    const startRange = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const endRange = new Date(now.getTime() + (this.config.weeksAhead + 8) * 7 * 86400000);
+    // Get events from 7 days ago to 5 weeks ahead (optimized for speed)
+    const startRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const endRange = new Date(now.getTime() + this.config.weeksAhead * 7 * 86400000);
     
     const allEvents = [];
     
