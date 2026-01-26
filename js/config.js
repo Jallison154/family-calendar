@@ -33,7 +33,7 @@ const CONFIG = {
   // Weather (from Home Assistant)
   weather: {
     useHomeAssistant: true,
-    weatherEntity: 'weather.home'
+    weatherEntity: 'weather.kbil'
   },
 
   // Spotify (from Home Assistant)
