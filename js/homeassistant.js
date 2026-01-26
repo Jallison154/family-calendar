@@ -476,53 +476,69 @@ class HomeAssistantClient {
    * Get weather forecast using the weather.get_forecasts service (HA 2024+)
    */
   async getWeatherForecast(entityId, type = 'daily') {
+    // Try REST API first (more reliable for return_response)
+    try {
+      console.log('HA: Trying REST API for forecast', entityId, 'type:', type);
+      const baseUrl = this.config.url.replace(/\/$/, '');
+      
+      const response = await fetch(baseUrl + '/api/services/weather/get_forecasts', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + this.config.accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          entity_id: entityId,
+          type: type
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('HA: REST API response:', JSON.stringify(data).substring(0, 500));
+        
+        // Response format: { "weather.entity_id": { "forecast": [...] } }
+        if (data && data[entityId] && data[entityId].forecast) {
+          console.log('HA: Got forecast from REST API:', data[entityId].forecast.length, 'entries');
+          return data[entityId].forecast;
+        }
+      } else {
+        console.log('HA: REST API failed:', response.status);
+      }
+    } catch (e) {
+      console.warn('HA: REST API error:', e.message);
+    }
+    
+    // Fallback to WebSocket
     if (!this.isConnected) {
-      console.log('HA: Not connected, cannot fetch forecast');
+      console.log('HA: WebSocket not connected');
       return null;
     }
     
     try {
-      console.log('HA: Calling weather.get_forecasts for', entityId, 'type:', type);
-      
+      console.log('HA: Trying WebSocket for forecast');
       const result = await this.sendMessage({
         type: 'call_service',
         domain: 'weather',
         service: 'get_forecasts',
-        target: {
-          entity_id: entityId
-        },
-        service_data: {
-          type: type
-        },
+        target: { entity_id: entityId },
+        service_data: { type: type },
         return_response: true
       });
       
-      console.log('HA: Forecast service result:', JSON.stringify(result).substring(0, 500));
+      console.log('HA: WebSocket result:', JSON.stringify(result).substring(0, 500));
       
-      // Try different response formats
       if (result) {
-        // Format 1: result.response[entityId].forecast
         if (result.response && result.response[entityId] && result.response[entityId].forecast) {
           return result.response[entityId].forecast;
         }
-        // Format 2: result[entityId].forecast
         if (result[entityId] && result[entityId].forecast) {
           return result[entityId].forecast;
         }
-        // Format 3: result.forecast
-        if (result.forecast) {
-          return result.forecast;
-        }
-        // Format 4: result is the forecast array directly
-        if (Array.isArray(result)) {
-          return result;
-        }
       }
-      
-      console.log('HA: Could not parse forecast response');
       return [];
     } catch (error) {
-      console.warn('HA: Forecast service error:', error.message || error);
+      console.warn('HA: WebSocket error:', error.message);
       return null;
     }
   }
