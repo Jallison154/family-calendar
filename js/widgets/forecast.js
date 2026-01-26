@@ -1,6 +1,6 @@
 /**
  * 5-Day Weather Forecast Widget
- * Gets forecast from the weather widget's cached data or HA directly
+ * Uses WebSocket connection only (REST blocked by CORS)
  */
 
 class ForecastWidget extends BaseWidget {
@@ -22,8 +22,8 @@ class ForecastWidget extends BaseWidget {
   onInit() {
     console.log('🌤️ Forecast widget init, entity:', this.weatherEntity);
     
-    // Try to get forecast after a delay
-    setTimeout(() => this.update(), 2000);
+    // Wait for HA connection, then try to get forecast
+    setTimeout(() => this.update(), 3000);
     this.startAutoUpdate(1800000); // 30 minutes
   }
 
@@ -34,78 +34,55 @@ class ForecastWidget extends BaseWidget {
       this.setStatus('updating');
       let forecast = [];
       
-      // Method 1: Check if weather widget has forecast data cached
-      const weatherWidgets = document.querySelectorAll('.widget-weather');
-      for (const w of weatherWidgets) {
-        const widgetId = w.id;
-        if (window.widgetRegistry && window.widgetRegistry.widgets) {
-          const weatherWidget = Array.from(window.widgetRegistry.widgets.values())
-            .find(widget => widget.type === 'weather');
-          if (weatherWidget && weatherWidget.currentData && weatherWidget.currentData.forecast) {
-            forecast = weatherWidget.currentData.forecast;
-            console.log('🌤️ Got forecast from weather widget:', forecast.length);
-            break;
-          }
+      const haClient = window.app?.haClient;
+      
+      // Method 1: Check entity state attributes (often has forecast)
+      if (haClient) {
+        const state = haClient.getState(this.weatherEntity);
+        console.log('🌤️ Entity state:', state ? 'found' : 'not found');
+        
+        if (state?.attributes?.forecast) {
+          forecast = state.attributes.forecast;
+          console.log('🌤️ Got forecast from entity attributes:', forecast.length);
         }
       }
       
-      // Method 2: Try REST API directly
-      if (forecast.length === 0 && window.CONFIG?.homeAssistant?.url) {
-        console.log('🌤️ Trying REST API directly...');
-        const haUrl = window.CONFIG.homeAssistant.url.replace(/\/$/, '');
-        const haToken = window.CONFIG.homeAssistant.accessToken;
+      // Method 2: Use WebSocket service call
+      if (forecast.length === 0 && haClient?.isConnected) {
+        console.log('🌤️ Trying WebSocket service call...');
         
-        // Try twice_daily first (what weather.kbil uses)
         for (const forecastType of ['twice_daily', 'daily', 'hourly']) {
           if (forecast.length > 0) break;
           
           try {
-            console.log('🌤️ Trying', forecastType, 'via REST...');
-            const response = await fetch(haUrl + '/api/services/weather/get_forecasts', {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Bearer ' + haToken,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                entity_id: this.weatherEntity,
-                type: forecastType
-              })
-            });
+            console.log('🌤️ Trying', forecastType, 'via WebSocket...');
+            const result = await haClient.getWeatherForecast(this.weatherEntity, forecastType);
+            console.log('🌤️ WebSocket result for', forecastType, ':', result);
             
-            if (response.ok) {
-              const data = await response.json();
-              console.log('🌤️ REST response for', forecastType, ':', Object.keys(data));
-              
-              if (data && data[this.weatherEntity] && data[this.weatherEntity].forecast) {
-                const rawForecast = data[this.weatherEntity].forecast;
-                console.log('🌤️ Raw forecast entries:', rawForecast.length);
-                
-                if (forecastType === 'twice_daily') {
-                  // Combine day/night into single days
-                  forecast = this.combineTwiceDaily(rawForecast);
-                } else if (forecastType === 'hourly') {
-                  forecast = this.convertHourlyToDaily(rawForecast);
-                } else {
-                  forecast = rawForecast;
-                }
+            if (result && Array.isArray(result) && result.length > 0) {
+              if (forecastType === 'twice_daily') {
+                forecast = this.combineTwiceDaily(result);
+              } else if (forecastType === 'hourly') {
+                forecast = this.convertHourlyToDaily(result);
+              } else {
+                forecast = result;
               }
-            } else {
-              console.log('🌤️ REST failed for', forecastType, ':', response.status);
             }
           } catch (e) {
-            console.log('🌤️ REST error for', forecastType, ':', e.message);
+            console.log('🌤️ WebSocket error for', forecastType, ':', e.message);
           }
         }
       }
       
-      // Method 3: Try HA client
-      if (forecast.length === 0 && window.app?.haClient?.isConnected) {
-        console.log('🌤️ Trying HA client...');
-        const state = window.app.haClient.getState(this.weatherEntity);
-        if (state && state.attributes && state.attributes.forecast) {
-          forecast = state.attributes.forecast;
-          console.log('🌤️ Got from entity attributes:', forecast.length);
+      // Method 3: Check weather widget's data
+      if (forecast.length === 0 && window.widgetRegistry) {
+        console.log('🌤️ Checking weather widget...');
+        const weatherWidget = Array.from(window.widgetRegistry.widgets?.values() || [])
+          .find(w => w.type === 'weather');
+        
+        if (weatherWidget?.currentData?.forecast) {
+          forecast = weatherWidget.currentData.forecast;
+          console.log('🌤️ Got from weather widget:', forecast.length);
         }
       }
       
@@ -135,7 +112,6 @@ class ForecastWidget extends BaseWidget {
           templow: entry.temperature
         });
       } else {
-        // Daytime entry typically has higher temp
         if (entry.is_daytime !== false && entry.temperature > existing.temperature) {
           existing.temperature = entry.temperature;
           existing.condition = entry.condition;
@@ -160,7 +136,7 @@ class ForecastWidget extends BaseWidget {
   }
 
   render() {
-    const body = this.element.querySelector(`#${this.id}-body`);
+    const body = this.element?.querySelector(`#${this.id}-body`);
     if (!body) return;
 
     if (this.forecast.length === 0) {
@@ -168,7 +144,7 @@ class ForecastWidget extends BaseWidget {
         <div class="forecast-empty">
           <div>No forecast data</div>
           <div style="font-size: 0.65rem; margin-top: 0.3rem; opacity: 0.6;">
-            Check console for 🌤️ logs
+            Entity: ${this.weatherEntity}
           </div>
         </div>
       `;

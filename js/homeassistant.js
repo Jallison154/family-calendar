@@ -476,40 +476,10 @@ class HomeAssistantClient {
    * Get weather forecast using the weather.get_forecasts service (HA 2024+)
    */
   async getWeatherForecast(entityId, type = 'daily') {
-    // Try REST API first (more reliable for return_response)
-    try {
-      console.log('HA: Trying REST API for forecast', entityId, 'type:', type);
-      const baseUrl = this.config.url.replace(/\/$/, '');
-      
-      const response = await fetch(baseUrl + '/api/services/weather/get_forecasts', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + this.config.accessToken,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          entity_id: entityId,
-          type: type
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('HA: REST API response:', JSON.stringify(data).substring(0, 500));
-        
-        // Response format: { "weather.entity_id": { "forecast": [...] } }
-        if (data && data[entityId] && data[entityId].forecast) {
-          console.log('HA: Got forecast from REST API:', data[entityId].forecast.length, 'entries');
-          return data[entityId].forecast;
-        }
-      } else {
-        console.log('HA: REST API failed:', response.status);
-      }
-    } catch (e) {
-      console.warn('HA: REST API error:', e.message);
-    }
+    // Use WebSocket only (REST is blocked by CORS from browser)
+    console.log('HA: Getting forecast for', entityId, 'type:', type);
     
-    // Fallback to WebSocket
+    // WebSocket
     if (!this.isConnected) {
       console.log('HA: WebSocket not connected');
       return null;
