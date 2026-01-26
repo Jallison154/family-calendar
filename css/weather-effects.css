@@ -8,8 +8,8 @@
   pointer-events: none;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 2s ease;
-  z-index: -1; /* Ensure it stays behind all content */
+  transition: opacity 1s ease;
+  z-index: 1000; /* Overlay on top of all content */
 }
 
 .weather-effects.active {

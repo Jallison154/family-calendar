@@ -217,6 +217,11 @@ class WeatherWidget extends BaseWidget {
     }
     
     this.currentData = data;
+    
+    // Trigger weather effects based on condition
+    if (window.weatherEffects && data.condition) {
+      window.weatherEffects.setWeather(data.condition);
+    }
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
