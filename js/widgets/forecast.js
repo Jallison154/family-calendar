@@ -21,30 +21,26 @@ class ForecastWidget extends BaseWidget {
   }
 
   onInit() {
-    // Get Home Assistant client from app
     if (window.app && window.app.haClient) {
       this.haClient = window.app.haClient;
     }
     
     // Initial update with delay to let HA connect
     setTimeout(() => this.update(), 3000);
-    
-    // Update every 30 minutes
     this.startAutoUpdate(1800000);
   }
 
   async update() {
-    console.log('🌤️ Forecast widget updating...');
+    console.log('🌤️ Forecast widget updating for:', this.weatherEntity);
     
     if (!this.haClient) {
-      console.log('🌤️ No HA client available');
       if (window.app && window.app.haClient) {
         this.haClient = window.app.haClient;
       }
     }
     
     if (!this.haClient || !this.haClient.isConnected) {
-      console.log('🌤️ HA client not connected, will retry...');
+      console.log('🌤️ HA not connected, retrying in 5s...');
       setTimeout(() => this.update(), 5000);
       return;
     }
@@ -53,65 +49,82 @@ class ForecastWidget extends BaseWidget {
       this.setStatus('updating');
       let forecast = [];
       
-      // Method 1: Try to get forecast via service call (HA 2024+)
-      console.log('🌤️ Trying forecast service for:', this.weatherEntity);
-      if (this.haClient.getWeatherForecast) {
+      // Try different forecast types in order of preference
+      const forecastTypes = ['twice_daily', 'daily', 'hourly'];
+      
+      for (const forecastType of forecastTypes) {
+        if (forecast.length > 0) break;
+        
+        console.log('🌤️ Trying forecast type:', forecastType);
         try {
-          const serviceForecast = await this.haClient.getWeatherForecast(this.weatherEntity, 'daily');
-          console.log('🌤️ Service response:', serviceForecast);
-          if (serviceForecast && Array.isArray(serviceForecast) && serviceForecast.length > 0) {
-            forecast = serviceForecast;
-            console.log('🌤️ Got forecast via service:', forecast.length, 'days');
+          const result = await this.haClient.getWeatherForecast(this.weatherEntity, forecastType);
+          console.log('🌤️ Result for', forecastType, ':', result ? result.length : 'null');
+          
+          if (result && Array.isArray(result) && result.length > 0) {
+            if (forecastType === 'hourly') {
+              // Convert hourly to daily by taking one entry per day
+              const dailyMap = new Map();
+              result.forEach(entry => {
+                const date = new Date(entry.datetime || entry.date);
+                const dayKey = date.toDateString();
+                if (!dailyMap.has(dayKey)) {
+                  dailyMap.set(dayKey, entry);
+                }
+              });
+              forecast = Array.from(dailyMap.values());
+            } else if (forecastType === 'twice_daily') {
+              // Twice daily has day/night entries - combine them
+              const dailyMap = new Map();
+              result.forEach(entry => {
+                const date = new Date(entry.datetime || entry.date);
+                const dayKey = date.toDateString();
+                const existing = dailyMap.get(dayKey);
+                
+                if (!existing) {
+                  dailyMap.set(dayKey, {
+                    datetime: entry.datetime || entry.date,
+                    condition: entry.condition,
+                    temperature: entry.temperature,
+                    templow: entry.templow || entry.temperature
+                  });
+                } else {
+                  // Update with high/low from day and night
+                  const isDay = entry.is_daytime !== false;
+                  if (isDay) {
+                    existing.temperature = entry.temperature;
+                    existing.condition = entry.condition;
+                  } else {
+                    existing.templow = entry.temperature;
+                  }
+                }
+              });
+              forecast = Array.from(dailyMap.values());
+            } else {
+              forecast = result;
+            }
+            console.log('🌤️ Got forecast via', forecastType, ':', forecast.length, 'days');
           }
         } catch (e) {
-          console.warn('🌤️ Forecast service failed:', e);
+          console.log('🌤️', forecastType, 'failed:', e.message);
         }
       }
       
-      // Method 2: Fallback to entity attributes
-      if (!forecast || forecast.length === 0) {
-        console.log('🌤️ Trying entity attributes fallback...');
+      // Fallback to entity attributes
+      if (forecast.length === 0) {
+        console.log('🌤️ Trying entity attributes...');
         const state = this.haClient.getState(this.weatherEntity);
-        console.log('🌤️ Entity state:', state);
-        if (state && state.attributes) {
-          // Try different attribute names
-          forecast = state.attributes.forecast || 
-                     state.attributes.daily_forecast ||
-                     state.attributes.hourly_forecast || 
-                     [];
-          console.log('🌤️ Got forecast from attributes:', forecast.length, 'entries');
-        }
-      }
-      
-      // Method 3: Try hourly forecast if daily not available
-      if ((!forecast || forecast.length === 0) && this.haClient.getWeatherForecast) {
-        console.log('🌤️ Trying hourly forecast...');
-        try {
-          const hourlyForecast = await this.haClient.getWeatherForecast(this.weatherEntity, 'hourly');
-          if (hourlyForecast && Array.isArray(hourlyForecast) && hourlyForecast.length > 0) {
-            // Group by day and take first entry per day
-            const dailyMap = new Map();
-            hourlyForecast.forEach(entry => {
-              const date = new Date(entry.datetime || entry.date);
-              const dayKey = date.toDateString();
-              if (!dailyMap.has(dayKey)) {
-                dailyMap.set(dayKey, entry);
-              }
-            });
-            forecast = Array.from(dailyMap.values()).slice(0, 5);
-            console.log('🌤️ Converted hourly to daily:', forecast.length, 'days');
-          }
-        } catch (e) {
-          console.warn('🌤️ Hourly forecast also failed:', e);
+        if (state && state.attributes && state.attributes.forecast) {
+          forecast = state.attributes.forecast;
+          console.log('🌤️ Got forecast from attributes:', forecast.length);
         }
       }
       
       this.forecast = (forecast || []).slice(0, 5);
-      console.log('🌤️ Final forecast count:', this.forecast.length);
+      console.log('🌤️ Final forecast:', this.forecast.length, 'days');
       this.render();
       this.setStatus('connected');
     } catch (e) {
-      console.error('🌤️ Forecast update error:', e);
+      console.error('🌤️ Forecast error:', e);
       this.setStatus('error');
     }
   }
@@ -133,10 +146,10 @@ class ForecastWidget extends BaseWidget {
     const forecastHTML = this.forecast.map(day => {
       const date = new Date(day.datetime || day.date);
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      const condition = day.condition || day.state || 'unknown';
+      const condition = day.condition || 'unknown';
       const icon = this.getIcon(condition);
-      const high = day.temperature ?? day.temp ?? day.temp_max ?? day.native_temperature ?? '--';
-      const low = day.templow ?? day.temp_low ?? day.temp_min ?? day.native_templow ?? '';
+      const high = day.temperature ?? day.temp ?? day.temp_max ?? '--';
+      const low = day.templow ?? day.temp_low ?? day.temp_min ?? '';
       
       return `
         <div class="forecast-day-card">
@@ -172,7 +185,6 @@ class ForecastWidget extends BaseWidget {
   }
 }
 
-// Register widget
 if (typeof window !== 'undefined' && window.widgetRegistry) {
   window.widgetRegistry.register('forecast', ForecastWidget);
 }
