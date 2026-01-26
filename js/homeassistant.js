@@ -476,27 +476,53 @@ class HomeAssistantClient {
    * Get weather forecast using the weather.get_forecasts service (HA 2024+)
    */
   async getWeatherForecast(entityId, type = 'daily') {
-    if (!this.isConnected) return null;
+    if (!this.isConnected) {
+      console.log('HA: Not connected, cannot fetch forecast');
+      return null;
+    }
     
     try {
+      console.log('HA: Calling weather.get_forecasts for', entityId, 'type:', type);
+      
       const result = await this.sendMessage({
         type: 'call_service',
         domain: 'weather',
         service: 'get_forecasts',
+        target: {
+          entity_id: entityId
+        },
         service_data: {
-          entity_id: entityId,
           type: type
         },
         return_response: true
       });
       
-      // Result format: { "weather.entity_id": { "forecast": [...] } }
-      if (result && result.response && result.response[entityId]) {
-        return result.response[entityId].forecast || [];
+      console.log('HA: Forecast service result:', JSON.stringify(result).substring(0, 500));
+      
+      // Try different response formats
+      if (result) {
+        // Format 1: result.response[entityId].forecast
+        if (result.response && result.response[entityId] && result.response[entityId].forecast) {
+          return result.response[entityId].forecast;
+        }
+        // Format 2: result[entityId].forecast
+        if (result[entityId] && result[entityId].forecast) {
+          return result[entityId].forecast;
+        }
+        // Format 3: result.forecast
+        if (result.forecast) {
+          return result.forecast;
+        }
+        // Format 4: result is the forecast array directly
+        if (Array.isArray(result)) {
+          return result;
+        }
       }
+      
+      console.log('HA: Could not parse forecast response');
       return [];
     } catch (error) {
-      console.warn('HomeAssistantClient: Forecast service not available, using attributes fallback');
+      console.warn('HA: Forecast service error:', error.message || error);
       return null;
     }
   }
