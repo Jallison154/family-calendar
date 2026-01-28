@@ -195,6 +195,9 @@ class CalendarWidget extends BaseWidget {
     
     console.log(`📅 Grouping ${this.events.length} events by date`);
     
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    
     for (const event of this.events) {
       if (!event.start || !event.end) {
         console.warn('⚠️ Event missing start/end in grouping:', event);
@@ -202,22 +205,44 @@ class CalendarWidget extends BaseWidget {
       }
       
       try {
+        // Create new Date objects to avoid mutating originals
         let startDay = new Date(event.start);
         if (isNaN(startDay.getTime())) {
           console.warn('⚠️ Invalid start date:', event.start, event);
           continue;
         }
-        startDay.setHours(0, 0, 0, 0);
+        // Use local date components to avoid timezone issues
+        const startYear = startDay.getFullYear();
+        const startMonth = startDay.getMonth();
+        const startDate = startDay.getDate();
+        startDay = new Date(startYear, startMonth, startDate, 0, 0, 0, 0);
         
         let endDay = new Date(event.end);
         if (isNaN(endDay.getTime())) {
           console.warn('⚠️ Invalid end date:', event.end, event);
           continue;
         }
+        
+        // For all-day events, end is exclusive (next day), so subtract 1
         if (event.isAllDay) {
           endDay.setDate(endDay.getDate() - 1);
         }
-        endDay.setHours(0, 0, 0, 0);
+        // Use local date components for end day too
+        const endYear = endDay.getFullYear();
+        const endMonth = endDay.getMonth();
+        const endDate = endDay.getDate();
+        endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
+        
+        // For all-day events, extend the end date by 1 hour if it just ended
+        if (event.isAllDay) {
+          const endDayWithTime = new Date(endYear, endMonth, endDate, 23, 59, 59, 999);
+          if (endDayWithTime < now && endDayWithTime >= oneHourAgo) {
+            // Event ended within the last hour, include it on the next day too
+            const nextDay = new Date(endDay);
+            nextDay.setDate(nextDay.getDate() + 1);
+            endDay = nextDay;
+          }
+        }
         
         const currentDay = new Date(startDay);
         while (currentDay <= endDay) {
@@ -286,8 +311,8 @@ class CalendarWidget extends BaseWidget {
     const eventCount = events.length;
     
     // Fixed size for all days - no auto-scaling
-    const fontSize = '0.6rem';
-    const timeFontSize = '0.55rem';
+    const fontSize = '0.7rem';
+    const timeFontSize = '0.65rem';
     const padding = '0.12rem 0.2rem';
     const lineClamp = 1;
     

@@ -38,9 +38,22 @@ class TodaysEventsWidget extends BaseWidget {
       return;
     }
 
-    // Get events from calendar client (it should already have them loaded)
-    this.events = this.calendarClient.events || [];
-    this.render();
+    // Force refresh events from calendar client
+    try {
+      // If calendar client has events, use them; otherwise trigger a fetch
+      if (this.calendarClient.events && this.calendarClient.events.length > 0) {
+        this.events = this.calendarClient.events;
+      } else {
+        // Wait a bit for calendar to load, then use its events
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        this.events = this.calendarClient.events || [];
+      }
+      this.render();
+    } catch (e) {
+      console.error('Today\'s events update error:', e);
+      this.events = this.calendarClient.events || [];
+      this.render();
+    }
   }
 
   render() {
@@ -139,29 +152,57 @@ class TodaysEventsWidget extends BaseWidget {
     const todayEnd = new Date(this.today);
     todayEnd.setHours(23, 59, 59, 999);
     
+    // For all-day events, keep them visible for 1 hour after they end
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    
     console.log('📅 Checking events for today:', todayStart.toDateString());
     
     for (const event of this.events) {
+      // Use local date components to avoid timezone issues
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
       // For all-day events, check if the date matches
       if (event.isAllDay) {
         // All-day event: check if today falls within the event's date range
-        const eventStartDay = new Date(eventStart);
-        eventStartDay.setHours(0, 0, 0, 0);
+        const eventStartYear = eventStart.getFullYear();
+        const eventStartMonth = eventStart.getMonth();
+        const eventStartDate = eventStart.getDate();
+        const eventStartDay = new Date(eventStartYear, eventStartMonth, eventStartDate, 0, 0, 0, 0);
+        
         let eventEndDay = new Date(eventEnd);
         // All-day events typically have end = start + 1 day, so subtract 1
         eventEndDay.setDate(eventEndDay.getDate() - 1);
-        eventEndDay.setHours(23, 59, 59, 999);
+        const eventEndYear = eventEndDay.getFullYear();
+        const eventEndMonth = eventEndDay.getMonth();
+        const eventEndDate = eventEndDay.getDate();
+        eventEndDay = new Date(eventEndYear, eventEndMonth, eventEndDate, 23, 59, 59, 999);
         
-        if (todayStart >= eventStartDay && todayStart <= eventEndDay) {
+        // Check if today is within the event range
+        const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
+        
+        // Also check if event ended within the last hour (keep it visible)
+        const eventEndedRecently = eventEndDay < todayStart && eventEndDay >= oneHourAgo;
+        
+        if (isTodayInRange || eventEndedRecently) {
           events.push(event);
         }
       } else {
         // Timed event: check if any part of the event is on today
+        // Use local date components for comparison
+        const eventStartYear = eventStart.getFullYear();
+        const eventStartMonth = eventStart.getMonth();
+        const eventStartDate = eventStart.getDate();
+        const eventStartLocal = new Date(eventStartYear, eventStartMonth, eventStartDate, eventStart.getHours(), eventStart.getMinutes(), eventStart.getSeconds());
+        
+        const eventEndYear = eventEnd.getFullYear();
+        const eventEndMonth = eventEnd.getMonth();
+        const eventEndDate = eventEnd.getDate();
+        const eventEndLocal = new Date(eventEndYear, eventEndMonth, eventEndDate, eventEnd.getHours(), eventEnd.getMinutes(), eventEnd.getSeconds());
+        
         // Event overlaps with today if: eventStart <= todayEnd AND eventEnd >= todayStart
-        if (eventStart <= todayEnd && eventEnd >= todayStart) {
+        if (eventStartLocal <= todayEnd && eventEndLocal >= todayStart) {
           events.push(event);
         }
       }
