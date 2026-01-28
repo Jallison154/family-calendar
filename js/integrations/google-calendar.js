@@ -15,11 +15,11 @@ class GoogleCalendarClient {
   }
 
   async fetchEvents() {
-    // Use a wider date range to ensure we get all events
+    // Start from today (no past events) to speed up loading
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    // Get events from 7 days ago to 5 weeks ahead (optimized for speed)
-    const startRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // Get events from today to 5 weeks ahead (no past events for faster loading)
+    const startRange = new Date(now);
     const endRange = new Date(now.getTime() + this.config.weeksAhead * 7 * 86400000);
     
     const allEvents = [];
@@ -29,14 +29,36 @@ class GoogleCalendarClient {
       
       try {
         const events = await this.fetchIcsFeed(feed, startRange, endRange);
-        console.log(`📅 Fetched ${events.length} events from ${feed.name || 'Unnamed'}`);
-        allEvents.push(...events);
+        // Filter out past events immediately after fetching
+        const nowTime = new Date();
+        const todayStart = new Date(nowTime);
+        todayStart.setHours(0, 0, 0, 0);
+        
+        const filteredEvents = events.filter(event => {
+          if (!event.end) return false;
+          const eventEnd = new Date(event.end);
+          
+          // For all-day events: keep if today is within the event range
+          if (event.isAllDay) {
+            const eventStartDay = new Date(event.start);
+            eventStartDay.setHours(0, 0, 0, 0);
+            // All-day events have end = start + 1 day (exclusive), so subtract 1
+            let eventEndDay = new Date(eventEnd);
+            eventEndDay.setDate(eventEndDay.getDate() - 1);
+            eventEndDay.setHours(23, 59, 59, 999);
+            // Keep if today is within the event range
+            return todayStart >= eventStartDay && todayStart <= eventEndDay;
+          }
+          
+          // For timed events: only keep if they haven't ended yet
+          return eventEnd > nowTime;
+        });
+        allEvents.push(...filteredEvents);
       } catch (e) {
         console.error(`ICS feed error (${feed.name}):`, e);
       }
     }
     
-    console.log(`📅 Total events loaded: ${allEvents.length}`);
     this.events = allEvents;
   }
 
@@ -84,24 +106,12 @@ class GoogleCalendarClient {
       }
       
       const icsText = await response.text();
-      console.log(`📅 Received ICS data (${icsText.length} bytes) for ${feed.name || 'Unnamed'}`);
       
       if (!icsText || icsText.trim().length === 0) {
         throw new Error('ICS feed returned empty response');
       }
       
       const events = this.parseIcs(icsText, feed, startRange, endRange);
-      console.log(`📅 Parsed ${events.length} events from ${feed.name || 'Unnamed'}`);
-      
-      // Log event details for debugging (first 3 events)
-      if (events.length > 0) {
-        console.log('📅 Sample events:', events.slice(0, 3).map(e => ({
-          title: e.title || 'Untitled',
-          start: e.start?.toISOString(),
-          end: e.end?.toISOString(),
-          isAllDay: e.isAllDay
-        })));
-      }
       
       return events;
     } catch (error) {
@@ -192,7 +202,6 @@ class GoogleCalendarClient {
             currentEvent.end.setDate(currentEvent.end.getDate() + 1);
             start = startDate;
             end = currentEvent.end;
-            console.log('📅 Detected all-day event (VALUE=DATE):', currentEvent.title || 'Untitled', 'on', startDate.toDateString());
           } else {
             // Ensure isAllDay is false for events with times
             currentEvent.isAllDay = false;
@@ -204,14 +213,9 @@ class GoogleCalendarClient {
           delete currentEvent._dtendValue;
           delete currentEvent._dtendParams;
           
-          // Include ALL events with valid dates - maximum permissiveness
-          // The calendar widget will handle what to display based on its date range
+          // Include all events - filtering will happen after parsing
+          // This allows us to properly handle all-day events
           events.push(currentEvent);
-          
-          // Debug logging for events with no time
-          if (currentEvent.isAllDay) {
-            console.log('📅 All-day event added:', currentEvent.title || 'Untitled', 'start:', currentEvent.start.toISOString(), 'end:', currentEvent.end.toISOString());
-          }
           
           if (!currentEvent.title) {
             console.warn('⚠️ Event has no title:', currentEvent);

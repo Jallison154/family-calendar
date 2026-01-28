@@ -142,7 +142,7 @@ class TodaysEventsWidget extends BaseWidget {
       const location = event.location ? Helpers.escapeHtml(event.location) : null;
 
       html += `
-        <div class="todays-event-item ${isNow ? 'is-now' : ''} ${isPast ? 'is-past' : ''}" style="--event-color: ${color}">
+        <div class="todays-event-item ${isNow ? 'is-now' : ''}" style="--event-color: ${color}">
           <div class="todays-event-time">
             <div class="todays-event-time-main">${timeStr}</div>
             ${durationStr ? `<div class="todays-event-time-duration">${durationStr}</div>` : ''}
