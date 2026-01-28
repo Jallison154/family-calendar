@@ -182,12 +182,19 @@ class TodaysEventsWidget extends BaseWidget {
         // Check if today is within the event range (active event)
         const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
         
-        // For past events, only show if they ended within the last hour
-        // (not if they're active today - those always show)
-        const eventEndedRecently = eventEndDay < todayStart && eventEndDay >= oneHourAgo;
+        // For past events (ended before today), only show if they ended within the last hour
+        // eventEndDay is already set to the end of the event's last day (23:59:59.999)
+        const eventEndedBeforeToday = eventEndDay < todayStart;
+        const hoursSinceEventEnded = (now.getTime() - eventEndDay.getTime()) / (1000 * 60 * 60);
+        const eventEndedWithinLastHour = eventEndedBeforeToday && hoursSinceEventEnded <= 1;
+        
+        // Debug logging for all-day events
+        if (eventEndedBeforeToday && !eventEndedWithinLastHour) {
+          console.log(`📅 All-day event "${event.title}" ended ${hoursSinceEventEnded.toFixed(2)} hours ago - hiding`);
+        }
         
         // Only show if it's active today OR ended within the last hour
-        if (isTodayInRange || eventEndedRecently) {
+        if (isTodayInRange || eventEndedWithinLastHour) {
           events.push(event);
         }
       } else {
