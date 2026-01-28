@@ -182,19 +182,34 @@ class TodaysEventsWidget extends BaseWidget {
         // Check if today is within the event range (active event)
         const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
         
-        // For past events (ended before today), only show if they ended within the last hour
+        // Calculate when the event actually ended (end of the last day)
         // eventEndDay is already set to the end of the event's last day (23:59:59.999)
-        const eventEndedBeforeToday = eventEndDay < todayStart;
         const hoursSinceEventEnded = (now.getTime() - eventEndDay.getTime()) / (1000 * 60 * 60);
-        const eventEndedWithinLastHour = eventEndedBeforeToday && hoursSinceEventEnded <= 1;
+        const eventEndedMoreThanHourAgo = hoursSinceEventEnded > 1;
         
-        // Debug logging for all-day events
-        if (eventEndedBeforeToday && !eventEndedWithinLastHour) {
-          console.log(`📅 All-day event "${event.title}" ended ${hoursSinceEventEnded.toFixed(2)} hours ago - hiding`);
+        // Debug logging for all all-day events
+        console.log(`📅 All-day event "${event.title || 'Untitled'}":`, {
+          startDay: eventStartDay.toDateString(),
+          endDay: eventEndDay.toDateString(),
+          todayStart: todayStart.toDateString(),
+          isTodayInRange,
+          hoursSinceEventEnded: hoursSinceEventEnded.toFixed(2),
+          eventEndedMoreThanHourAgo,
+          willShow: !eventEndedMoreThanHourAgo && (isTodayInRange || hoursSinceEventEnded <= 1)
+        });
+        
+        // Only show if:
+        // 1. Event is active today (today is within event range), OR
+        // 2. Event ended within the last hour (even if it's not active today)
+        // But NEVER show if event ended more than 1 hour ago
+        if (eventEndedMoreThanHourAgo) {
+          // Don't show - event ended more than 1 hour ago
+          console.log(`   → HIDING: Event ended ${hoursSinceEventEnded.toFixed(2)} hours ago (> 1 hour)`);
+          continue; // Skip this event
         }
         
-        // Only show if it's active today OR ended within the last hour
-        if (isTodayInRange || eventEndedWithinLastHour) {
+        if (isTodayInRange || hoursSinceEventEnded <= 1) {
+          console.log(`   → SHOWING: ${isTodayInRange ? 'Active today' : `Ended ${hoursSinceEventEnded.toFixed(2)} hours ago (within 1 hour)`}`);
           events.push(event);
         }
       } else {
