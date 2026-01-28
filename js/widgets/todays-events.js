@@ -104,37 +104,12 @@ class TodaysEventsWidget extends BaseWidget {
     const now = new Date();
     html += '<div class="todays-events-list">';
     
-    // Separate events into active (current/upcoming) and past
-    const activeEvents = [];
-    const pastEvents = [];
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    
+    // We already filtered out ended events in getTodaysEvents(),
+    // so everything here is "current or upcoming today".
     todayEvents.forEach(event => {
       const start = new Date(event.start);
       const end = new Date(event.end);
-      
-      // For timed events, check if they ended more than 1 hour ago
-      // All-day events are already filtered in getTodaysEvents() to only show active ones
-      let isPast = false;
-      if (!event.isAllDay) {
-        const hoursSinceEventEnded = (now.getTime() - end.getTime()) / (1000 * 60 * 60);
-        isPast = hoursSinceEventEnded > 1;
-      }
-      
-      if (isPast) {
-        pastEvents.push(event);
-      } else {
-        activeEvents.push(event);
-      }
-    });
-    
-    // Only show active events (current/upcoming/all-day events active today)
-    // Past events are filtered out - we'll show a message if there are no more active events
-    activeEvents.forEach(event => {
-      const start = new Date(event.start);
-      const end = new Date(event.end);
       const isNow = !event.isAllDay && start <= now && end > now;
-      const isUpcoming = !event.isAllDay && start > now;
       
       let timeStr = 'All Day';
       let durationStr = '';
@@ -164,16 +139,6 @@ class TodaysEventsWidget extends BaseWidget {
       `;
     });
     
-    // Show "no more events today" message if we filtered out past events
-    // This appears after active events to indicate there are no more events remaining today
-    if (pastEvents.length > 0) {
-      html += `
-        <div class="todays-events-end-message">
-          <div class="todays-events-end-text">No more events today</div>
-        </div>
-      `;
-    }
-
     html += '</div>';
     body.innerHTML = html;
   }
@@ -187,9 +152,7 @@ class TodaysEventsWidget extends BaseWidget {
     const todayEnd = new Date(this.today);
     todayEnd.setHours(23, 59, 59, 999);
     
-    // For all-day events, keep them visible for 1 hour after they end
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     
     console.log('📅 Checking events for today:', todayStart.toDateString());
     
@@ -198,7 +161,8 @@ class TodaysEventsWidget extends BaseWidget {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
-      // For all-day events, ONLY show if today is within the event's date range
+      // For all-day events, show if TODAY is within the event's date range.
+      // These stay visible for the whole day in the Today list.
       if (event.isAllDay) {
         // All-day event: check if today falls within the event's date range
         const eventStartYear = eventStart.getFullYear();
@@ -214,14 +178,16 @@ class TodaysEventsWidget extends BaseWidget {
         const eventEndDate = eventEndDay.getDate();
         eventEndDay = new Date(eventEndYear, eventEndMonth, eventEndDate, 23, 59, 59, 999);
         
-        // ONLY show if today is within the event range (no grace period for all-day events)
+        // ONLY show if today is within the event range
         const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
         
         if (isTodayInRange) {
           events.push(event);
         }
       } else {
-        // Timed event: check if any part of the event is on today AND hasn't ended more than 1 hour ago
+        // Timed event: show if it is on TODAY and has not ended yet.
+        // Once the end time has passed, it disappears from the Today list.
+
         // Use local date components for comparison
         const eventStartYear = eventStart.getFullYear();
         const eventStartMonth = eventStart.getMonth();
@@ -233,15 +199,11 @@ class TodaysEventsWidget extends BaseWidget {
         const eventEndDate = eventEnd.getDate();
         const eventEndLocal = new Date(eventEndYear, eventEndMonth, eventEndDate, eventEnd.getHours(), eventEnd.getMinutes(), eventEnd.getSeconds());
         
-        // Check if event overlaps with today
+        // Check if event is on today at all
         const overlapsToday = eventStartLocal <= todayEnd && eventEndLocal >= todayStart;
         
-        // Check if event ended more than 1 hour ago
-        const hoursSinceEventEnded = (now.getTime() - eventEndLocal.getTime()) / (1000 * 60 * 60);
-        const endedMoreThanHourAgo = hoursSinceEventEnded > 1;
-        
-        // Only include if it overlaps with today AND hasn't ended more than 1 hour ago
-        if (overlapsToday && !endedMoreThanHourAgo) {
+        // Only include if it overlaps with today AND has not ended yet
+        if (overlapsToday && eventEndLocal > now) {
           events.push(event);
         }
       }

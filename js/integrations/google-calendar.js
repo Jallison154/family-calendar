@@ -15,11 +15,12 @@ class GoogleCalendarClient {
   }
 
   async fetchEvents() {
-    // Start from today (no past events) to speed up loading
+    // Use a slightly wider date range so we don't miss
+    // multi-day and recently-ended events that still matter
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    // Get events from today to 5 weeks ahead (no past events for faster loading)
-    const startRange = new Date(now);
+    // Get events from 7 days ago to 5 weeks ahead (optimized for speed)
+    const startRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const endRange = new Date(now.getTime() + this.config.weeksAhead * 7 * 86400000);
     
     const allEvents = [];
@@ -29,31 +30,7 @@ class GoogleCalendarClient {
       
       try {
         const events = await this.fetchIcsFeed(feed, startRange, endRange);
-        // Filter out past events immediately after fetching
-        const nowTime = new Date();
-        const todayStart = new Date(nowTime);
-        todayStart.setHours(0, 0, 0, 0);
-        
-        const filteredEvents = events.filter(event => {
-          if (!event.end) return false;
-          const eventEnd = new Date(event.end);
-          
-          // For all-day events: keep if today is within the event range
-          if (event.isAllDay) {
-            const eventStartDay = new Date(event.start);
-            eventStartDay.setHours(0, 0, 0, 0);
-            // All-day events have end = start + 1 day (exclusive), so subtract 1
-            let eventEndDay = new Date(eventEnd);
-            eventEndDay.setDate(eventEndDay.getDate() - 1);
-            eventEndDay.setHours(23, 59, 59, 999);
-            // Keep if today is within the event range
-            return todayStart >= eventStartDay && todayStart <= eventEndDay;
-          }
-          
-          // For timed events: only keep if they haven't ended yet
-          return eventEnd > nowTime;
-        });
-        allEvents.push(...filteredEvents);
+        allEvents.push(...events);
       } catch (e) {
         console.error(`ICS feed error (${feed.name}):`, e);
       }
