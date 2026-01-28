@@ -107,11 +107,19 @@ class TodaysEventsWidget extends BaseWidget {
     // Separate events into active (current/upcoming) and past
     const activeEvents = [];
     const pastEvents = [];
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     
     todayEvents.forEach(event => {
       const start = new Date(event.start);
       const end = new Date(event.end);
-      const isPast = !event.isAllDay && end < now;
+      
+      // For timed events, check if they ended more than 1 hour ago
+      // All-day events are already filtered in getTodaysEvents() to only show active ones
+      let isPast = false;
+      if (!event.isAllDay) {
+        const hoursSinceEventEnded = (now.getTime() - end.getTime()) / (1000 * 60 * 60);
+        isPast = hoursSinceEventEnded > 1;
+      }
       
       if (isPast) {
         pastEvents.push(event);
@@ -213,7 +221,7 @@ class TodaysEventsWidget extends BaseWidget {
           events.push(event);
         }
       } else {
-        // Timed event: check if any part of the event is on today
+        // Timed event: check if any part of the event is on today AND hasn't ended more than 1 hour ago
         // Use local date components for comparison
         const eventStartYear = eventStart.getFullYear();
         const eventStartMonth = eventStart.getMonth();
@@ -225,8 +233,15 @@ class TodaysEventsWidget extends BaseWidget {
         const eventEndDate = eventEnd.getDate();
         const eventEndLocal = new Date(eventEndYear, eventEndMonth, eventEndDate, eventEnd.getHours(), eventEnd.getMinutes(), eventEnd.getSeconds());
         
-        // Event overlaps with today if: eventStart <= todayEnd AND eventEnd >= todayStart
-        if (eventStartLocal <= todayEnd && eventEndLocal >= todayStart) {
+        // Check if event overlaps with today
+        const overlapsToday = eventStartLocal <= todayEnd && eventEndLocal >= todayStart;
+        
+        // Check if event ended more than 1 hour ago
+        const hoursSinceEventEnded = (now.getTime() - eventEndLocal.getTime()) / (1000 * 60 * 60);
+        const endedMoreThanHourAgo = hoursSinceEventEnded > 1;
+        
+        // Only include if it overlaps with today AND hasn't ended more than 1 hour ago
+        if (overlapsToday && !endedMoreThanHourAgo) {
           events.push(event);
         }
       }
