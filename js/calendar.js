@@ -303,11 +303,11 @@ class GoogleCalendarWidget {
     dateStr = dateStr.replace(/[^0-9TZ]/g, '');
     
     if (dateStr.length === 8) {
-      // All-day: YYYYMMDD
+      // All-day: YYYYMMDD - use LOCAL time at midnight for consistency
       const year = parseInt(dateStr.substring(0, 4));
       const month = parseInt(dateStr.substring(4, 6)) - 1;
       const day = parseInt(dateStr.substring(6, 8));
-      return new Date(year, month, day);
+      return new Date(year, month, day, 0, 0, 0, 0);
     } else if (dateStr.includes('T')) {
       // DateTime
       const year = parseInt(dateStr.substring(0, 4));
