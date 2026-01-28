@@ -106,10 +106,19 @@ class TodaysEventsWidget extends BaseWidget {
     
     // We already filtered out ended events in getTodaysEvents(),
     // so everything here is "current or upcoming today".
+    // Find at most ONE timed event that is actually happening right now.
+    const currentTimedEvent = todayEvents.find(event => {
+      if (event.isAllDay) return false;
+      const start = new Date(event.start);
+      const end = new Date(event.end);
+      return start <= now && end > now;
+    });
+
     todayEvents.forEach(event => {
       const start = new Date(event.start);
       const end = new Date(event.end);
-      const isNow = !event.isAllDay && start <= now && end > now;
+      // Only the single "currently running" timed event gets the NOW badge
+      const isNow = currentTimedEvent === event;
       
       let timeStr = 'All Day';
       let durationStr = '';
