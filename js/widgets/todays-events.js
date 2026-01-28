@@ -179,12 +179,14 @@ class TodaysEventsWidget extends BaseWidget {
         const eventEndDate = eventEndDay.getDate();
         eventEndDay = new Date(eventEndYear, eventEndMonth, eventEndDate, 23, 59, 59, 999);
         
-        // Check if today is within the event range
+        // Check if today is within the event range (active event)
         const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
         
-        // Also check if event ended within the last hour (keep it visible)
+        // For past events, only show if they ended within the last hour
+        // (not if they're active today - those always show)
         const eventEndedRecently = eventEndDay < todayStart && eventEndDay >= oneHourAgo;
         
+        // Only show if it's active today OR ended within the last hour
         if (isTodayInRange || eventEndedRecently) {
           events.push(event);
         }

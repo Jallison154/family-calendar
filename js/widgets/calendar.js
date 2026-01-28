@@ -195,9 +195,6 @@ class CalendarWidget extends BaseWidget {
     
     console.log(`📅 Grouping ${this.events.length} events by date`);
     
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    
     for (const event of this.events) {
       if (!event.start || !event.end) {
         console.warn('⚠️ Event missing start/end in grouping:', event);
@@ -233,17 +230,7 @@ class CalendarWidget extends BaseWidget {
         const endDate = endDay.getDate();
         endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
         
-        // For all-day events, extend the end date by 1 hour if it just ended
-        if (event.isAllDay) {
-          const endDayWithTime = new Date(endYear, endMonth, endDate, 23, 59, 59, 999);
-          if (endDayWithTime < now && endDayWithTime >= oneHourAgo) {
-            // Event ended within the last hour, include it on the next day too
-            const nextDay = new Date(endDay);
-            nextDay.setDate(nextDay.getDate() + 1);
-            endDay = nextDay;
-          }
-        }
-        
+        // All-day events stay on calendar forever (no time-based filtering)
         const currentDay = new Date(startDay);
         while (currentDay <= endDay) {
           const key = this.dateKey(currentDay);
