@@ -104,11 +104,28 @@ class TodaysEventsWidget extends BaseWidget {
     const now = new Date();
     html += '<div class="todays-events-list">';
     
+    // Separate events into active (current/upcoming) and past
+    const activeEvents = [];
+    const pastEvents = [];
+    
     todayEvents.forEach(event => {
       const start = new Date(event.start);
       const end = new Date(event.end);
-      const isNow = !event.isAllDay && start <= now && end > now;
       const isPast = !event.isAllDay && end < now;
+      
+      if (isPast) {
+        pastEvents.push(event);
+      } else {
+        activeEvents.push(event);
+      }
+    });
+    
+    // Only show active events (current/upcoming/all-day events active today)
+    // Past events are filtered out - we'll show a message if there are no more active events
+    activeEvents.forEach(event => {
+      const start = new Date(event.start);
+      const end = new Date(event.end);
+      const isNow = !event.isAllDay && start <= now && end > now;
       const isUpcoming = !event.isAllDay && start > now;
       
       let timeStr = 'All Day';
@@ -138,6 +155,16 @@ class TodaysEventsWidget extends BaseWidget {
         </div>
       `;
     });
+    
+    // Show "no more events today" message if we filtered out past events
+    // This appears after active events to indicate there are no more events remaining today
+    if (pastEvents.length > 0) {
+      html += `
+        <div class="todays-events-end-message">
+          <div class="todays-events-end-text">No more events today</div>
+        </div>
+      `;
+    }
 
     html += '</div>';
     body.innerHTML = html;
@@ -163,7 +190,7 @@ class TodaysEventsWidget extends BaseWidget {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       
-      // For all-day events, check if the date matches
+      // For all-day events, ONLY show if today is within the event's date range
       if (event.isAllDay) {
         // All-day event: check if today falls within the event's date range
         const eventStartYear = eventStart.getFullYear();
@@ -179,37 +206,10 @@ class TodaysEventsWidget extends BaseWidget {
         const eventEndDate = eventEndDay.getDate();
         eventEndDay = new Date(eventEndYear, eventEndMonth, eventEndDate, 23, 59, 59, 999);
         
-        // Check if today is within the event range (active event)
+        // ONLY show if today is within the event range (no grace period for all-day events)
         const isTodayInRange = todayStart >= eventStartDay && todayStart <= eventEndDay;
         
-        // Calculate when the event actually ended (end of the last day)
-        // eventEndDay is already set to the end of the event's last day (23:59:59.999)
-        const hoursSinceEventEnded = (now.getTime() - eventEndDay.getTime()) / (1000 * 60 * 60);
-        const eventEndedMoreThanHourAgo = hoursSinceEventEnded > 1;
-        
-        // Debug logging for all all-day events
-        console.log(`📅 All-day event "${event.title || 'Untitled'}":`, {
-          startDay: eventStartDay.toDateString(),
-          endDay: eventEndDay.toDateString(),
-          todayStart: todayStart.toDateString(),
-          isTodayInRange,
-          hoursSinceEventEnded: hoursSinceEventEnded.toFixed(2),
-          eventEndedMoreThanHourAgo,
-          willShow: !eventEndedMoreThanHourAgo && (isTodayInRange || hoursSinceEventEnded <= 1)
-        });
-        
-        // Only show if:
-        // 1. Event is active today (today is within event range), OR
-        // 2. Event ended within the last hour (even if it's not active today)
-        // But NEVER show if event ended more than 1 hour ago
-        if (eventEndedMoreThanHourAgo) {
-          // Don't show - event ended more than 1 hour ago
-          console.log(`   → HIDING: Event ended ${hoursSinceEventEnded.toFixed(2)} hours ago (> 1 hour)`);
-          continue; // Skip this event
-        }
-        
-        if (isTodayInRange || hoursSinceEventEnded <= 1) {
-          console.log(`   → SHOWING: ${isTodayInRange ? 'Active today' : `Ended ${hoursSinceEventEnded.toFixed(2)} hours ago (within 1 hour)`}`);
+        if (isTodayInRange) {
           events.push(event);
         }
       } else {
