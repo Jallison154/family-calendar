@@ -125,9 +125,10 @@ class CalendarWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
-    // ALWAYS use fresh current date (not cached)
-    this.today = new Date();
-    this.today.setHours(0, 0, 0, 0);
+    // ALWAYS use fresh "today" in browser timezone
+    this.today = typeof Helpers !== 'undefined' && Helpers.startOfTodayLocal
+      ? Helpers.startOfTodayLocal()
+      : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
     
     // Clear stale cache if date changed
     const todayKey = this.dateKey(this.today);

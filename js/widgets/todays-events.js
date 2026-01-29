@@ -60,9 +60,10 @@ class TodaysEventsWidget extends BaseWidget {
     const body = this.element.querySelector(`#${this.id}-body`);
     if (!body) return;
 
-    // ALWAYS refresh today's date (don't use stale constructor value)
-    this.today = new Date();
-    this.today.setHours(0, 0, 0, 0);
+    // ALWAYS refresh today in browser timezone
+    this.today = typeof Helpers !== 'undefined' && Helpers.startOfTodayLocal
+      ? Helpers.startOfTodayLocal()
+      : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 
     // Get today's date string
     const todayDateStr = this.today.toLocaleDateString('en-US', { 
@@ -155,12 +156,13 @@ class TodaysEventsWidget extends BaseWidget {
   getTodaysEvents() {
     const events = [];
     
-    // Get today's date boundaries in LOCAL time
-    const todayStart = new Date(this.today);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(this.today);
-    todayEnd.setHours(23, 59, 59, 999);
-    
+    // Use browser timezone for "today" and "now"
+    const todayStart = typeof Helpers !== 'undefined' && Helpers.startOfTodayLocal
+      ? Helpers.startOfTodayLocal()
+      : (() => { const d = new Date(this.today); d.setHours(0, 0, 0, 0); return d; })();
+    const todayEnd = typeof Helpers !== 'undefined' && Helpers.endOfTodayLocal
+      ? Helpers.endOfTodayLocal()
+      : (() => { const d = new Date(this.today); d.setHours(23, 59, 59, 999); return d; })();
     const now = new Date();
     
     console.log('📅 Checking events for today:', todayStart.toDateString());

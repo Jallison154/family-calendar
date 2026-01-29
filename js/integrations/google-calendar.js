@@ -262,17 +262,18 @@ class GoogleCalendarClient {
   parseIcsDate(dateStr, params = {}) {
     if (!dateStr) return new Date();
     
+    // All parsed dates are used with getFullYear(), getMonth(), getDate(), getHours() etc.,
+    // which use the browser's local timezone. So we build instants correctly here.
+    
     // Handle DATE value type (all-day events)
-    // Use LOCAL time for all-day events to avoid timezone shift issues
+    // YYYYMMDD = date in browser's local day (no time)
     if (params.VALUE === 'DATE' || dateStr.length === 8) {
-      // All-day: YYYYMMDD - use LOCAL time, not UTC
       const year = parseInt(dateStr.substring(0, 4), 10);
       const month = parseInt(dateStr.substring(4, 6), 10) - 1;
       const day = parseInt(dateStr.substring(6, 8), 10);
-      // Create date in LOCAL timezone at midnight
       return new Date(year, month, day, 0, 0, 0, 0);
-    } else if (dateStr.includes('T')) {
-      // DateTime: YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ
+    }
+    if (dateStr.includes('T')) {
       const year = parseInt(dateStr.substring(0, 4), 10);
       const month = parseInt(dateStr.substring(4, 6), 10) - 1;
       const day = parseInt(dateStr.substring(6, 8), 10);
@@ -280,13 +281,12 @@ class GoogleCalendarClient {
       const minute = parseInt(dateStr.substring(11, 13), 10) || 0;
       const second = parseInt(dateStr.substring(13, 15), 10) || 0;
       
-      if (dateStr.endsWith('Z') || dateStr.length >= 16 && dateStr[15] === 'Z') {
-        // UTC time
+      if (dateStr.endsWith('Z') || (dateStr.length >= 16 && dateStr[15] === 'Z')) {
+        // UTC: store as instant; getHours()/getDate() etc. will use browser timezone when read
         return new Date(Date.UTC(year, month, day, hour, minute, second));
-      } else {
-        // Local time (or timezone specified in TZID param - simplified for now)
-        return new Date(year, month, day, hour, minute, second);
       }
+      // Floating/local: treat as browser local time (same as "today" and display)
+      return new Date(year, month, day, hour, minute, second);
     }
     
     // Fallback: try to parse as ISO string

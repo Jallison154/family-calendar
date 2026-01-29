@@ -1,8 +1,43 @@
 /**
  * Utility Helper Functions
+ * All date/time logic uses the browser's local timezone.
  */
 
 const Helpers = {
+  /**
+   * Get the browser's timezone (e.g. "America/Denver")
+   */
+  getBrowserTimeZone() {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+    } catch (e) {
+      return undefined;
+    }
+  },
+
+  /**
+   * Start of today (midnight) in the browser's local timezone
+   */
+  startOfTodayLocal() {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  },
+
+  /**
+   * End of today (23:59:59.999) in the browser's local timezone
+   */
+  endOfTodayLocal() {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  },
+
+  /**
+   * Build a Date from local date components (uses browser timezone)
+   */
+  dateFromLocalParts(year, month, date, hour = 0, minute = 0, second = 0) {
+    return new Date(year, month, date, hour, minute, second);
+  },
+
   /**
    * Debounce function calls
    */
@@ -33,25 +68,31 @@ const Helpers = {
   },
 
   /**
-   * Format date
+   * Format date (always in browser timezone)
    */
   formatDate(date, format = 'long') {
+    const tz = this.getBrowserTimeZone();
     const options = {
-      long: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' },
-      short: { month: 'short', day: 'numeric' },
-      month: { month: 'long', year: 'numeric' }
+      long: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: tz },
+      short: { month: 'short', day: 'numeric', timeZone: tz },
+      month: { month: 'long', year: 'numeric', timeZone: tz }
     };
     return date.toLocaleDateString('en-US', options[format] || options.long);
   },
 
   /**
-   * Format time
+   * Format time (always in browser timezone)
    */
   formatTime(date, use24Hour = false) {
-    if (use24Hour) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const tz = this.getBrowserTimeZone();
+    const options = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !use24Hour,
+      timeZone: tz
+    };
+    if (use24Hour) options.hour12 = false;
+    return date.toLocaleTimeString('en-US', options);
   },
 
   /**
