@@ -61,7 +61,6 @@ class DashboardApp {
     });
     
     // Poll for server config changes every 30 seconds
-    // Store initial server config hash
     if (typeof window.settingsAPI !== 'undefined') {
       try {
         const initialConfig = await window.settingsAPI.fetch();
@@ -73,33 +72,33 @@ class DashboardApp {
       }
     }
     
-    // Check for server version changes (code updates)
     this.checkServerVersion();
     
-    setInterval(async () => {
+    // Use stored interval IDs so we can clear them on unload (avoid leaks)
+    this._configPollId = setInterval(async () => {
       if (typeof window.settingsAPI !== 'undefined') {
         try {
           const serverConfig = await window.settingsAPI.fetch();
           if (serverConfig && Object.keys(serverConfig).length > 0) {
             const newConfigHash = JSON.stringify(serverConfig);
-            // Only reload if the server config actually changed
             if (this.lastServerConfigHash !== null && this.lastServerConfigHash !== newConfigHash) {
-              console.log('🔄 Server config changed, reloading...');
               location.reload();
             }
             this.lastServerConfigHash = newConfigHash;
           }
-        } catch (e) {
-          // Silent fail - server might be temporarily unavailable
-          // Network errors are expected and handled gracefully
-        }
+        } catch (e) {}
       }
     }, 30000);
     
-    // Check for server version changes every 30 seconds
-    setInterval(() => this.checkServerVersion(), 30000);
+    this._versionPollId = setInterval(() => this.checkServerVersion(), 30000);
     
-    console.log('✅ Dashboard initialized');
+    // Clear intervals when page is hidden/unloaded to avoid leaks on long-running tabs
+    const clearAppIntervals = () => {
+      if (this._configPollId) { clearInterval(this._configPollId); this._configPollId = null; }
+      if (this._versionPollId) { clearInterval(this._versionPollId); this._versionPollId = null; }
+    };
+    window.addEventListener('beforeunload', clearAppIntervals);
+    window.addEventListener('pagehide', clearAppIntervals);
   }
 
   async checkServerVersion() {

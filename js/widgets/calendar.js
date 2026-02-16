@@ -134,7 +134,6 @@ class CalendarWidget extends BaseWidget {
     const todayKey = this.dateKey(this.today);
     const lastRenderKey = this._lastRenderDateKey;
     if (lastRenderKey && lastRenderKey !== todayKey) {
-      console.log('📅 Date changed, clearing stale cache');
       localStorage.removeItem(this.cacheKey);
       localStorage.removeItem(this.cacheExpiryKey);
     }
@@ -221,17 +220,26 @@ class CalendarWidget extends BaseWidget {
           continue;
         }
         
-        // For all-day events, end is exclusive (next day), so subtract 1
+        let endYear, endMonth, endDate;
         if (event.isAllDay) {
+          // All-day: end is exclusive (next day), so last day is end - 1
           endDay.setDate(endDay.getDate() - 1);
+          endYear = endDay.getFullYear();
+          endMonth = endDay.getMonth();
+          endDate = endDay.getDate();
+        } else {
+          // Timed event: end is actual end time. If it's exactly midnight, the event
+          // doesn't include that day; otherwise the last day is the day of end.
+          const h = endDay.getHours(), m = endDay.getMinutes(), s = endDay.getSeconds(), ms = endDay.getMilliseconds();
+          if (h === 0 && m === 0 && s === 0 && ms === 0) {
+            endDay.setDate(endDay.getDate() - 1);
+          }
+          endYear = endDay.getFullYear();
+          endMonth = endDay.getMonth();
+          endDate = endDay.getDate();
         }
-        // Use local date components for end day too
-        const endYear = endDay.getFullYear();
-        const endMonth = endDay.getMonth();
-        const endDate = endDay.getDate();
         endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
         
-        // All-day events stay on calendar forever (no time-based filtering)
         const currentDay = new Date(startDay);
         while (currentDay <= endDay) {
           const key = this.dateKey(currentDay);
@@ -246,7 +254,6 @@ class CalendarWidget extends BaseWidget {
       }
     }
     
-    console.log(`📅 Grouped events into ${grouped.size} days`);
     return grouped;
   }
 

@@ -237,7 +237,11 @@ class UnsplashSlideshow {
     slide.style.background = this.photos[0].gradient;
     slide.classList.add('active');
 
-    // Start cycling through gradients
+    // Start cycling through gradients (clear any existing interval first)
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
     this.intervalId = setInterval(() => {
       this.currentIndex = (this.currentIndex + 1) % this.photos.length;
       const nextSlideIndex = (this.activeSlideIndex + 1) % 2;

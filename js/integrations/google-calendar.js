@@ -36,7 +36,14 @@ class GoogleCalendarClient {
       }
     }
     
-    this.events = allEvents;
+    // Dedupe by title + start + end (same event from multiple feeds or double-parse)
+    const seen = new Set();
+    this.events = allEvents.filter(event => {
+      const key = `${event.title || ''}|${event.start?.getTime?.() ?? event.start}|${event.end?.getTime?.() ?? event.end}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   async fetchIcsFeed(feed, startRange, endRange) {
@@ -59,8 +66,6 @@ class GoogleCalendarClient {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
     try {
-      console.log(`📅 Fetching ICS feed via server proxy: ${feed.name || 'Unnamed'}`);
-      
       const response = await fetch(proxyUrl, {
         signal: controller.signal,
         headers: {

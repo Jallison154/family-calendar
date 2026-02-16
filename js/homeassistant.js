@@ -21,6 +21,7 @@ class HomeAssistantClient {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 5000;
+    this.reconnectTimeoutId = null;
     
     this.entityGridEl = null;
     this.statusEl = null;
@@ -54,6 +55,10 @@ class HomeAssistantClient {
    * Connect to Home Assistant WebSocket API
    */
   connect() {
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
     this.updateStatus('connecting');
     
     const wsUrl = this.config.url
@@ -118,7 +123,7 @@ class HomeAssistantClient {
     
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      setTimeout(() => this.connect(), this.reconnectDelay);
+      this.reconnectTimeoutId = setTimeout(() => this.connect(), this.reconnectDelay);
     } else {
       this.updateStatus('error');
     }

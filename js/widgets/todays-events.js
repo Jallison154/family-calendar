@@ -165,8 +165,6 @@ class TodaysEventsWidget extends BaseWidget {
       : (() => { const d = new Date(this.today); d.setHours(23, 59, 59, 999); return d; })();
     const now = new Date();
     
-    console.log('📅 Checking events for today:', todayStart.toDateString());
-    
     for (const event of this.events) {
       // Use local date components to avoid timezone issues
       const eventStart = new Date(event.start);
@@ -220,7 +218,6 @@ class TodaysEventsWidget extends BaseWidget {
       }
     }
     
-    console.log('📅 Found', events.length, 'events for today');
     return events;
   }
 
