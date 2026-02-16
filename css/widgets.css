@@ -279,18 +279,18 @@
 }
 
 .entity-card.entity-active::before {
-  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.2) 0%, transparent 70%);
   opacity: 1;
   animation: entityPulse 2s ease-in-out infinite;
 }
 
 .entity-card.entity-on {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .entity-card.entity-on .entity-icon {
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
 }
 
 .entity-card.entity-off {
@@ -329,7 +329,7 @@
 }
 
 .entity-card.entity-active .ha-entity-icon-img {
-  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6));
+  filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.6));
 }
 
 .entity-name {
@@ -350,8 +350,8 @@
 }
 
 .entity-card.entity-active .entity-value {
-  color: var(--color-success);
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+  color: #ef4444;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
 }
 
 @keyframes entityPulse {
