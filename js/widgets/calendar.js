@@ -193,8 +193,6 @@ class CalendarWidget extends BaseWidget {
       return grouped;
     }
     
-    console.log(`📅 Grouping ${this.events.length} events by date`);
-    
     for (const event of this.events) {
       if (!event.start || !event.end) {
         console.warn('⚠️ Event missing start/end in grouping:', event);
@@ -202,43 +200,40 @@ class CalendarWidget extends BaseWidget {
       }
       
       try {
-        // Create new Date objects to avoid mutating originals
-        let startDay = new Date(event.start);
-        if (isNaN(startDay.getTime())) {
+        // All dates interpreted in browser local timezone (getFullYear/getMonth/getDate)
+        const startRaw = new Date(event.start);
+        if (isNaN(startRaw.getTime())) {
           console.warn('⚠️ Invalid start date:', event.start, event);
           continue;
         }
-        // Use local date components to avoid timezone issues
-        const startYear = startDay.getFullYear();
-        const startMonth = startDay.getMonth();
-        const startDate = startDay.getDate();
-        startDay = new Date(startYear, startMonth, startDate, 0, 0, 0, 0);
+        const startYear = startRaw.getFullYear();
+        const startMonth = startRaw.getMonth();
+        const startDate = startRaw.getDate();
+        const startDay = new Date(startYear, startMonth, startDate, 0, 0, 0, 0);
         
-        let endDay = new Date(event.end);
-        if (isNaN(endDay.getTime())) {
+        const endRaw = new Date(event.end);
+        if (isNaN(endRaw.getTime())) {
           console.warn('⚠️ Invalid end date:', event.end, event);
           continue;
         }
         
         let endYear, endMonth, endDate;
         if (event.isAllDay) {
-          // All-day: end is exclusive (next day), so last day is end - 1
-          endDay.setDate(endDay.getDate() - 1);
-          endYear = endDay.getFullYear();
-          endMonth = endDay.getMonth();
-          endDate = endDay.getDate();
+          // All-day: ICS end is exclusive (next day), so last display day is end - 1
+          const d = new Date(endRaw);
+          d.setDate(d.getDate() - 1);
+          endYear = d.getFullYear();
+          endMonth = d.getMonth();
+          endDate = d.getDate();
         } else {
-          // Timed event: end is actual end time. If it's exactly midnight, the event
-          // doesn't include that day; otherwise the last day is the day of end.
-          const h = endDay.getHours(), m = endDay.getMinutes(), s = endDay.getSeconds(), ms = endDay.getMilliseconds();
-          if (h === 0 && m === 0 && s === 0 && ms === 0) {
-            endDay.setDate(endDay.getDate() - 1);
-          }
-          endYear = endDay.getFullYear();
-          endMonth = endDay.getMonth();
-          endDate = endDay.getDate();
+          // Timed event: last day = calendar day that contains (end - 1ms) in local time.
+          // This avoids timezone quirks (e.g. end at midnight UTC showing on next day locally).
+          const endMinus1ms = new Date(endRaw.getTime() - 1);
+          endYear = endMinus1ms.getFullYear();
+          endMonth = endMinus1ms.getMonth();
+          endDate = endMinus1ms.getDate();
         }
-        endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
+        const endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
         
         const currentDay = new Date(startDay);
         while (currentDay <= endDay) {
