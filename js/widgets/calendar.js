@@ -217,23 +217,17 @@ class CalendarWidget extends BaseWidget {
           continue;
         }
         
-        let endYear, endMonth, endDate;
+        let endDay;
         if (event.isAllDay) {
           // All-day: ICS end is exclusive (next day), so last display day is end - 1
           const d = new Date(endRaw);
           d.setDate(d.getDate() - 1);
-          endYear = d.getFullYear();
-          endMonth = d.getMonth();
-          endDate = d.getDate();
+          endDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
         } else {
-          // Timed event: last day = calendar day that contains (end - 1ms) in local time.
-          // This avoids timezone quirks (e.g. end at midnight UTC showing on next day locally).
-          const endMinus1ms = new Date(endRaw.getTime() - 1);
-          endYear = endMinus1ms.getFullYear();
-          endMonth = endMinus1ms.getMonth();
-          endDate = endMinus1ms.getDate();
+          // Timed event: show only on the start day to avoid timezone duplicates.
+          // (Events that span midnight would only show on start day; keeps grid simple.)
+          endDay = new Date(startYear, startMonth, startDate, 0, 0, 0, 0);
         }
-        const endDay = new Date(endYear, endMonth, endDate, 0, 0, 0, 0);
         
         const currentDay = new Date(startDay);
         while (currentDay <= endDay) {
