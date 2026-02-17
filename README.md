@@ -77,6 +77,8 @@ All settings are managed via `control.html` and stored server-side in `settings.
 
 The control panel supports multiple Google accounts, each with their own API key and calendars. Perfect for combining work and personal calendars.
 
+**Using the Google Calendar API:** See [docs/GOOGLE_CALENDAR_API.md](docs/GOOGLE_CALENDAR_API.md) for step-by-step setup (API key, calendar ID, and the **Calendars** format: `calendarId, #color, Display name`). The API only works for **public** calendars; for private calendars use the "Secret address in iCal format" (ICS) instead.
+
 ## Live Sync
 
 Changes made in `control.html` automatically sync to `index.html` via localStorage events. No page refresh needed on the dashboard!

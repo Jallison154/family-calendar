@@ -20,16 +20,14 @@ class ForecastWidget extends BaseWidget {
   }
 
   onInit() {
-    console.log('🌤️ Forecast widget init, entity:', this.weatherEntity);
-    
-    // Wait for HA connection, then try to get forecast
-    setTimeout(() => this.update(), 3000);
+    // Run first update soon; retry a few times so we catch HA when it connects
+    this.update();
+    setTimeout(() => this.update(), 2000);
+    setTimeout(() => this.update(), 6000);
     this.startAutoUpdate(1800000); // 30 minutes
   }
 
   async update() {
-    console.log('🌤️ Forecast updating...');
-    
     try {
       this.setStatus('updating');
       let forecast = [];
@@ -39,26 +37,17 @@ class ForecastWidget extends BaseWidget {
       // Method 1: Check entity state attributes (often has forecast)
       if (haClient) {
         const state = haClient.getState(this.weatherEntity);
-        console.log('🌤️ Entity state:', state ? 'found' : 'not found');
-        
         if (state?.attributes?.forecast) {
           forecast = state.attributes.forecast;
-          console.log('🌤️ Got forecast from entity attributes:', forecast.length);
         }
       }
       
       // Method 2: Use WebSocket service call
       if (forecast.length === 0 && haClient?.isConnected) {
-        console.log('🌤️ Trying WebSocket service call...');
-        
         for (const forecastType of ['twice_daily', 'daily', 'hourly']) {
           if (forecast.length > 0) break;
-          
           try {
-            console.log('🌤️ Trying', forecastType, 'via WebSocket...');
             const result = await haClient.getWeatherForecast(this.weatherEntity, forecastType);
-            console.log('🌤️ WebSocket result for', forecastType, ':', result);
-            
             if (result && Array.isArray(result) && result.length > 0) {
               if (forecastType === 'twice_daily') {
                 forecast = this.combineTwiceDaily(result);
@@ -69,25 +58,48 @@ class ForecastWidget extends BaseWidget {
               }
             }
           } catch (e) {
-            console.log('🌤️ WebSocket error for', forecastType, ':', e.message);
+            // try next type
           }
         }
       }
       
-      // Method 3: Check weather widget's data
+      // Method 3: Check weather widget's data (HA weather widget stores processed forecast with date, high, low, condition)
       if (forecast.length === 0 && window.widgetRegistry) {
-        console.log('🌤️ Checking weather widget...');
         const weatherWidget = Array.from(window.widgetRegistry.widgets?.values() || [])
           .find(w => w.type === 'weather');
         
-        if (weatherWidget?.currentData?.forecast) {
-          forecast = weatherWidget.currentData.forecast;
-          console.log('🌤️ Got from weather widget:', forecast.length);
+        if (weatherWidget?.currentData?.forecast?.length) {
+          forecast = weatherWidget.currentData.forecast.map(f => ({
+            datetime: f.date?.toISOString?.() || f.date,
+            date: f.date,
+            temperature: f.high,
+            templow: f.low,
+            condition: f.condition
+          }));
+        }
+      }
+      
+      // Method 4: OpenWeatherMap fallback (when HA not configured or no forecast from HA)
+      const owm = window.CONFIG?.weather?.openWeatherMap;
+      if (forecast.length === 0 && owm?.apiKey && owm?.lat != null && owm?.lon != null &&
+          owm.apiKey !== 'YOUR_OPENWEATHERMAP_API_KEY' && owm.apiKey !== '') {
+        try {
+          const units = owm.units || 'imperial';
+          const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/forecast?lat=${owm.lat}&lon=${owm.lon}&units=${units}&appid=${encodeURIComponent(owm.apiKey)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.list?.length) {
+              forecast = this.processOpenWeatherMapForecast(data.list);
+            }
+          }
+        } catch (e) {
+          console.warn('🌤️ OpenWeatherMap forecast failed:', e.message);
         }
       }
       
       this.forecast = (forecast || []).slice(0, 5);
-      console.log('🌤️ Final forecast count:', this.forecast.length);
       this.render();
       this.setStatus(this.forecast.length > 0 ? 'connected' : 'error');
     } catch (e) {
@@ -135,6 +147,31 @@ class ForecastWidget extends BaseWidget {
     return Array.from(dailyMap.values());
   }
 
+  /** Convert OpenWeatherMap 5-day list (3-hour items) to daily forecast for widget */
+  processOpenWeatherMapForecast(list) {
+    const days = new Map();
+    const owmToCondition = { Clear: 'clear', Clouds: 'cloudy', Rain: 'rainy', Drizzle: 'rainy', Thunderstorm: 'thunderstorm', Snow: 'snowy', Mist: 'fog', Smoke: 'fog', Haze: 'fog', Fog: 'fog' };
+    list.forEach(item => {
+      const date = new Date(item.dt * 1000);
+      const dayKey = date.toDateString();
+      const condition = (item.weather?.[0]?.main && owmToCondition[item.weather[0].main]) ? owmToCondition[item.weather[0].main] : 'clear';
+      if (!days.has(dayKey)) {
+        days.set(dayKey, { datetime: date.toISOString(), date, temps: [], lows: [], condition });
+      }
+      const d = days.get(dayKey);
+      d.temps.push(item.main.temp);
+      d.lows.push(item.main.temp);
+      d.condition = condition;
+    });
+    return Array.from(days.values()).map(d => ({
+      datetime: d.datetime,
+      date: d.date,
+      temperature: d.temps.length ? Math.max(...d.temps) : null,
+      templow: d.lows.length ? Math.min(...d.lows) : null,
+      condition: d.condition
+    }));
+  }
+
   render() {
     const body = this.element?.querySelector(`#${this.id}-body`);
     if (!body) return;
@@ -144,7 +181,7 @@ class ForecastWidget extends BaseWidget {
         <div class="forecast-empty">
           <div>No forecast data</div>
           <div style="font-size: 0.65rem; margin-top: 0.3rem; opacity: 0.6;">
-            Entity: ${this.weatherEntity}
+            Set weather entity in Control Panel, or add OpenWeatherMap (API key + lat/lon) for forecast.
           </div>
         </div>
       `;
@@ -156,8 +193,8 @@ class ForecastWidget extends BaseWidget {
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
       const condition = day.condition || 'unknown';
       const icon = this.getIcon(condition);
-      const high = day.temperature ?? day.temp ?? '--';
-      const low = day.templow ?? day.temp_low ?? '';
+      const high = day.temperature ?? day.temp ?? day.high ?? '--';
+      const low = day.templow ?? day.temp_low ?? day.low ?? '';
       
       return `
         <div class="forecast-day-card">

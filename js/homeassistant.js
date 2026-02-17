@@ -481,17 +481,8 @@ class HomeAssistantClient {
    * Get weather forecast using the weather.get_forecasts service (HA 2024+)
    */
   async getWeatherForecast(entityId, type = 'daily') {
-    // Use WebSocket only (REST is blocked by CORS from browser)
-    console.log('HA: Getting forecast for', entityId, 'type:', type);
-    
-    // WebSocket
-    if (!this.isConnected) {
-      console.log('HA: WebSocket not connected');
-      return null;
-    }
-    
+    if (!this.isConnected) return null;
     try {
-      console.log('HA: Trying WebSocket for forecast');
       const result = await this.sendMessage({
         type: 'call_service',
         domain: 'weather',
@@ -501,14 +492,20 @@ class HomeAssistantClient {
         return_response: true
       });
       
-      console.log('HA: WebSocket result:', JSON.stringify(result).substring(0, 500));
-      
       if (result) {
+        // Direct array (some HA versions)
+        if (Array.isArray(result) && result.length > 0) return result;
+        // response.entity_id.forecast
         if (result.response && result.response[entityId] && result.response[entityId].forecast) {
           return result.response[entityId].forecast;
         }
         if (result[entityId] && result[entityId].forecast) {
           return result[entityId].forecast;
+        }
+        // First key in result (entity map)
+        const keys = Object.keys(result);
+        for (const k of keys) {
+          if (result[k] && Array.isArray(result[k].forecast)) return result[k].forecast;
         }
       }
       return [];

@@ -7,6 +7,7 @@ class GoogleCalendarClient {
   constructor(config = {}) {
     this.config = {
       icsFeeds: config.icsFeeds || [],
+      accounts: config.accounts || [],
       weeksAhead: config.weeksAhead || 5,
       refreshInterval: config.refreshInterval || 300000,
       corsProxy: config.corsProxy || 'https://api.allorigins.win/raw?url='
@@ -15,19 +16,30 @@ class GoogleCalendarClient {
   }
 
   async fetchEvents() {
-    // Use a slightly wider date range so we don't miss
-    // multi-day and recently-ended events that still matter
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    // Get events from 7 days ago to 5 weeks ahead (optimized for speed)
     const startRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const endRange = new Date(now.getTime() + this.config.weeksAhead * 7 * 86400000);
-    
     const allEvents = [];
-    
+
+    // 1) Fetch from Google Calendar API (works for public calendars when API key is set)
+    for (const account of this.config.accounts) {
+      const apiKey = account.apiKey || account.key;
+      if (!apiKey || apiKey === 'YOUR_GOOGLE_CALENDAR_API_KEY') continue;
+      for (const cal of account.calendars || []) {
+        if (!cal.id) continue;
+        try {
+          const events = await this.fetchCalendarApi(apiKey, cal, startRange, endRange);
+          allEvents.push(...events);
+        } catch (e) {
+          console.error(`Calendar API error (${cal.name || cal.id}):`, e.message || e);
+        }
+      }
+    }
+
+    // 2) Fetch from ICS feeds (embed links, secret iCal, or public ICS)
     for (const feed of this.config.icsFeeds) {
       if (!feed.url || !feed.url.trim()) continue;
-      
       try {
         const events = await this.fetchIcsFeed(feed, startRange, endRange);
         allEvents.push(...events);
@@ -35,14 +47,49 @@ class GoogleCalendarClient {
         console.error(`ICS feed error (${feed.name}):`, e);
       }
     }
-    
-    // Dedupe by title + start + end (same event from multiple feeds or double-parse)
+
+    // Dedupe by title + start + end
     const seen = new Set();
     this.events = allEvents.filter(event => {
       const key = `${event.title || ''}|${event.start?.getTime?.() ?? event.start}|${event.end?.getTime?.() ?? event.end}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
+    });
+  }
+
+  /**
+   * Fetch events via Google Calendar API v3 (API key only works for public calendars).
+   * Calendar ID format: xxx@group.calendar.google.com or the long c_xxx@group.calendar.google.com
+   */
+  async fetchCalendarApi(apiKey, calendar, start, end) {
+    const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events`);
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('timeMin', start.toISOString());
+    url.searchParams.set('timeMax', end.toISOString());
+    url.searchParams.set('singleEvents', 'true');
+    url.searchParams.set('orderBy', 'startTime');
+    url.searchParams.set('maxResults', '250');
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(res.status === 403 ? 'Calendar API: access denied (calendar may be private; API key only works for public calendars)' : `Calendar API: ${res.status} ${err}`);
+    }
+    const data = await res.json();
+    return (data.items || []).map(event => {
+      const isAllDay = !event.start.dateTime;
+      const start = isAllDay ? new Date(event.start.date + 'T00:00:00') : new Date(event.start.dateTime);
+      const end = isAllDay ? new Date(event.end.date + 'T00:00:00') : new Date(event.end.dateTime);
+      return {
+        id: event.id,
+        title: event.summary || 'Untitled',
+        start,
+        end,
+        isAllDay,
+        location: event.location,
+        color: calendar.color || '#3b82f6'
+      };
     });
   }
 
@@ -88,7 +135,7 @@ class GoogleCalendarClient {
           if (errorJson.error) errorMsg = errorJson.error;
         } catch (e) {}
         if (response.status === 404) {
-          errorMsg = 'Calendar not found (404). If the calendar is private, use the "Secret address in iCal format" from Google Calendar → Settings → Integrate calendar.';
+          errorMsg = 'Calendar not found (404). With only an embed link you must make the calendar public: Google Calendar → click the calendar → Settings and sharing → Access permissions → "Make available to public" (e.g. "See all event details"). Then the same embed link will work here.';
         }
         throw new Error(errorMsg);
       }

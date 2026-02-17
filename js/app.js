@@ -39,8 +39,10 @@ class DashboardApp {
       window.app = this; // Make available to widgets
     }
     
-    // Initialize Google Calendar
-    if (this.config.googleCalendar?.icsFeeds?.length > 0) {
+    // Initialize Google Calendar (API key and/or ICS feeds)
+    const hasCalendarApi = this.config.googleCalendar?.accounts?.some(a => (a.apiKey || a.key) && (a.calendars?.length > 0));
+    const hasIcsFeeds = this.config.googleCalendar?.icsFeeds?.length > 0;
+    if (hasCalendarApi || hasIcsFeeds) {
       this.calendarClient = new GoogleCalendarClient(this.config.googleCalendar);
       await this.calendarClient.fetchEvents();
     }
