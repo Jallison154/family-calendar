@@ -34,11 +34,20 @@ class ForecastWidget extends BaseWidget {
       
       const haClient = window.app?.haClient;
       
-      // Method 1: Check entity state attributes (often has forecast)
+      // Method 1: Check entity state attributes (NWS and others use forecast, hourly_forecast, daily_forecast)
       if (haClient) {
         const state = haClient.getState(this.weatherEntity);
-        if (state?.attributes?.forecast) {
-          forecast = state.attributes.forecast;
+        const attrs = state?.attributes || {};
+        let raw = attrs.forecast || attrs.hourly_forecast || attrs.daily_forecast;
+        if (raw && !Array.isArray(raw)) {
+          raw = raw.forecast || raw.daily || raw.hourly || [];
+        }
+        if (Array.isArray(raw) && raw.length > 0) {
+          forecast = raw;
+          // If hourly, take one per day for 5-day display
+          if (attrs.hourly_forecast && raw.length > 24) {
+            forecast = this.convertHourlyToDaily(raw);
+          }
         }
       }
       
@@ -138,10 +147,12 @@ class ForecastWidget extends BaseWidget {
   convertHourlyToDaily(entries) {
     const dailyMap = new Map();
     entries.forEach(entry => {
-      const date = new Date(entry.datetime);
+      const raw = entry.datetime ?? entry.date ?? entry.timestamp;
+      const date = !raw ? null : (typeof raw === 'string' ? new Date(raw) : (raw < 10000000000 ? new Date(raw * 1000) : new Date(raw)));
+      if (!date || isNaN(date.getTime())) return;
       const dayKey = date.toDateString();
       if (!dailyMap.has(dayKey)) {
-        dailyMap.set(dayKey, entry);
+        dailyMap.set(dayKey, { ...entry, datetime: entry.datetime || (date?.toISOString?.() || date), date });
       }
     });
     return Array.from(dailyMap.values());
