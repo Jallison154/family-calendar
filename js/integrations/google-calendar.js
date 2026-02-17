@@ -49,38 +49,33 @@ class GoogleCalendarClient {
   async fetchIcsFeed(feed, startRange, endRange) {
     let url = feed.url.trim();
     
-    // Convert Google Calendar URLs to ICS feed URL
-    if (url.includes('calendar.google.com')) {
+    // If it's already an iCal feed URL (e.g. secret link), use as-is
+    const isAlreadyIcal = url.includes('/ical/') && url.includes('.ics');
+    
+    // Convert Google Calendar embed/web URLs to ICS feed URL
+    if (!isAlreadyIcal && url.includes('calendar.google.com')) {
       let calendarId = null;
-      // Embed format: ...?src=CALENDAR_ID&ctz=...
       if (url.includes('src=')) {
         const match = url.match(/[?&]src=([^&]+)/);
         if (match) calendarId = decodeURIComponent(match[1]);
       }
-      // Old web format: ...?cid=CALENDAR_ID
       if (!calendarId && url.includes('cid=')) {
         const match = url.match(/cid=([^&]+)/);
         if (match) calendarId = decodeURIComponent(match[1]);
       }
       if (calendarId) {
-        // Use public ICS feed (for private calendars you need the secret iCal URL from Google)
         url = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`;
       }
     }
     
-    // Use server-side proxy instead of CORS proxy (more reliable)
     const proxyUrl = '/api/calendar?url=' + encodeURIComponent(url);
-    
-    // Use AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     try {
       const response = await fetch(proxyUrl, {
         signal: controller.signal,
-        headers: {
-          'Accept': 'text/calendar, text/plain, */*'
-        }
+        headers: { 'Accept': 'text/calendar, text/plain, */*' }
       });
       
       clearTimeout(timeoutId);
@@ -91,8 +86,9 @@ class GoogleCalendarClient {
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.error) errorMsg = errorJson.error;
-        } catch (e) {
-          // Not JSON, use text as-is
+        } catch (e) {}
+        if (response.status === 404) {
+          errorMsg = 'Calendar not found (404). If the calendar is private, use the "Secret address in iCal format" from Google Calendar → Settings → Integrate calendar.';
         }
         throw new Error(errorMsg);
       }
